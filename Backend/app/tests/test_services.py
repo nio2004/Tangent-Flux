@@ -1,5 +1,5 @@
 from app.agents.agent3_update import _label_from_content
-from app.agents.agent1_schema import fallback_agent1
+from app.agents.agent1_schema import _map_source_to_concepts, fallback_agent1, schema_validation_issues
 from app.models import Chunk
 from app.services.memory_service import _assign_chunks_to_concepts, _text_label_overlap
 from app.services.chunk_service import chunk_text
@@ -54,6 +54,20 @@ def test_agent1_fallback_extracts_grounded_concepts_not_keywords():
     assert "long-context memory" in output.umbrella_concepts
     assert not {"arxiv", "question", "context", "agent"} & set(output.umbrella_concepts)
     assert all(len(phrase.split()) > 1 for phrases in output.keyphrase_map.values() for phrase in phrases)
+
+
+def test_agent1_fallback_only_maps_concepts_supported_by_source():
+    sources = {
+        "reasoning": "Scientific reasoning benchmarks need stronger evaluation loops and proof checking.",
+        "fine_tune": "Fine-tune small language models with curated traces and preference data.",
+    }
+    output = fallback_agent1(sources, "Explore scientific reasoning core fine-tune LLMs.")
+
+    assert not schema_validation_issues(output, sources, "Explore scientific reasoning core fine-tune LLMs.")
+    assert _map_source_to_concepts(
+        sources["reasoning"],
+        ["scientific reasoning core fine-tune", "reasoning core fine-tune llms"],
+    ) == []
 
 
 def test_concept_assignment_does_not_create_empty_nodes():

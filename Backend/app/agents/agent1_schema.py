@@ -1,5 +1,6 @@
 import re
 from collections import Counter
+from math import ceil
 
 from app.agents.prompts import AGENT_1_INSTRUCTIONS
 from app.agents.sdk import run_structured_agent
@@ -265,8 +266,16 @@ def _phrase_score(phrase: str) -> float:
 
 def _map_source_to_concepts(text: str, concepts: list[str]) -> list[str]:
     normalized = _clean_text(text).lower()
-    matches = [concept for concept in concepts if any(token in normalized for token in concept.split())]
+    matches = [concept for concept in concepts if _concept_mapped_by_text(concept, normalized)]
     return matches[:3]
+
+
+def _concept_mapped_by_text(concept: str, text: str) -> bool:
+    tokens = [token for token in concept.lower().replace("-", " ").split() if len(token) > 3]
+    if not tokens:
+        return False
+    matches = sum(1 for token in tokens if token in text)
+    return matches >= max(2, ceil(len(tokens) * 0.6))
 
 
 def _normalize_phrase(value: str) -> str:
