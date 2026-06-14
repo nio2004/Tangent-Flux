@@ -36,7 +36,7 @@ interface IdeaDetailProps {
   loading: boolean;
   error: string | null;
   onClose: () => void;
-  onNotesSave: (notes: string) => void;
+  onNotesSave: (notes: string) => Promise<void> | void;
   onCoverChange: (cover: string) => void;
   onMoveTask: (taskId: string, lane: KanbanLaneId) => void;
   onAddTask: (task: KanbanTask) => Promise<void> | void;

@@ -59,6 +59,31 @@ def test_ideas_and_workspace_hydrate(client: TestClient):
     assert {"idea", "notes", "resources", "tasks", "timeline", "artifacts", "graph", "agentRuns"} <= set(payload)
 
 
+def test_idea_dump_note_persists(client: TestClient):
+    idea = client.post(
+        "/api/ideas",
+        json={
+            "title": "Persistent Dump Test",
+            "description": "Testing note persistence.",
+            "problem": "Idea dump edits should survive a workspace reload.",
+            "tags": ["Test"],
+        },
+    ).json()
+
+    saved = client.put(
+        f"/api/ideas/{idea['id']}/notes",
+        json={"markdown": "## Saved dump\n\nThis should come back from SQLite."},
+    )
+    assert saved.status_code == 200
+    assert saved.json()["markdown"] == "## Saved dump\n\nThis should come back from SQLite."
+
+    workspace = client.get(f"/api/ideas/{idea['id']}/workspace")
+    assert workspace.status_code == 200
+    notes = workspace.json()["notes"]
+    assert len(notes) == 1
+    assert notes[0]["markdown"] == "## Saved dump\n\nThis should come back from SQLite."
+
+
 def test_agent3_guard_and_memory_flow(client: TestClient):
     idea = client.post(
         "/api/ideas",
