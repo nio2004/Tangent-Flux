@@ -34,6 +34,9 @@ export function GraphOverview({ graph, loading, error, onRefresh }: GraphOvervie
         {nodes.length === 0 && !loading && (
           <p className="graph-status">No graph memory yet. Initialize an idea to create concept nodes.</p>
         )}
+        {edges.map((edge) => (
+          <GraphEdgeLine key={edge.id} edge={edge} nodes={nodes} />
+        ))}
         {nodes.map((node, index) => (
           <GraphNodeCard key={node.id} node={node} index={index} total={nodes.length} />
         ))}
@@ -61,17 +64,48 @@ export function GraphOverview({ graph, loading, error, onRefresh }: GraphOvervie
 }
 
 function GraphNodeCard({ node, index, total }: { node: OverviewGraphNode; index: number; total: number }) {
-  const angle = (index / Math.max(total, 1)) * Math.PI * 2;
-  const radius = node.kind === "idea" ? 34 : 42;
-  const x = 50 + Math.cos(angle) * radius;
-  const y = 50 + Math.sin(angle) * radius;
+  const { x, y } = getGraphNodePosition(node, index, total);
   return (
     <article
       className={node.kind === "idea" ? "graph-node-card is-idea" : "graph-node-card"}
-      style={{ left: `${Math.max(4, Math.min(82, x))}%`, top: `${Math.max(4, Math.min(82, y))}%` }}
+      style={{ left: `${x}%`, top: `${y}%` }}
     >
       <strong>{node.label}</strong>
       <small>{node.kind === "idea" ? node.status : `${node.memberCount ?? 0} chunks`}</small>
     </article>
   );
+}
+
+function GraphEdgeLine({ edge, nodes }: { edge: OverviewGraph["edges"][number]; nodes: OverviewGraphNode[] }) {
+  const sourceIndex = nodes.findIndex((node) => node.id === edge.source);
+  const targetIndex = nodes.findIndex((node) => node.id === edge.target);
+  if (sourceIndex < 0 || targetIndex < 0) {
+    return null;
+  }
+
+  const source = getGraphNodePosition(nodes[sourceIndex], sourceIndex, nodes.length);
+  const target = getGraphNodePosition(nodes[targetIndex], targetIndex, nodes.length);
+  const dx = target.x - source.x;
+  const dy = target.y - source.y;
+
+  return (
+    <span
+      className={edge.edgeType === "BRIDGE" ? "graph-edge-line is-bridge" : "graph-edge-line"}
+      title={`${edge.edgeType} ${edge.weight.toFixed(2)}: ${edge.reason}`}
+      style={{
+        left: `${source.x}%`,
+        top: `${source.y}%`,
+        width: `${Math.hypot(dx, dy)}%`,
+        transform: `rotate(${Math.atan2(dy, dx) * (180 / Math.PI)}deg)`,
+      }}
+    />
+  );
+}
+
+function getGraphNodePosition(node: OverviewGraphNode, index: number, total: number) {
+  const angle = (index / Math.max(total, 1)) * Math.PI * 2;
+  const radius = node.kind === "idea" ? 34 : 42;
+  const x = 50 + Math.cos(angle) * radius;
+  const y = 50 + Math.sin(angle) * radius;
+  return { x: Math.max(4, Math.min(82, x)), y: Math.max(4, Math.min(82, y)) };
 }

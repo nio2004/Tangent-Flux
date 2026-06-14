@@ -1868,17 +1868,22 @@ button span,
   background-size: 28px 28px;
 }
 
-.local-edge {
+.local-edge,
+.graph-edge-line {
   position: absolute;
   z-index: 1;
   height: 2px;
   transform-origin: 0 50%;
-  background: rgba(22, 140, 255, 0.58);
+  background: linear-gradient(90deg, rgba(124, 183, 255, 0.9), rgba(255, 209, 47, 0.72));
+  box-shadow: 0 0 16px rgba(124, 183, 255, 0.32);
+  pointer-events: auto;
 }
 
-.local-edge.is-bridge {
+.local-edge.is-bridge,
+.graph-edge-line.is-bridge {
   height: 3px;
-  background: rgba(255, 209, 47, 0.82);
+  background: linear-gradient(90deg, rgba(255, 209, 47, 0.95), rgba(245, 158, 11, 0.75));
+  box-shadow: 0 0 18px rgba(255, 209, 47, 0.38);
 }
 
 .local-node,
