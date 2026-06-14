@@ -38,6 +38,6 @@ def hydrate_workspace(db: Session, idea: Idea) -> WorkspaceOut:
         artifacts=[artifact_out(artifact) for artifact in artifacts],
         coverUrl=idea.cover_url,
         memory=memory_out(memory),
-        graph=graph_out(nodes, edges) if nodes else GraphOut(nodes=[], edges=[]),
+        graph=graph_out(nodes, edges, db) if nodes else GraphOut(nodes=[], edges=[]),
         agentRuns=[agent_run_out(run) for run in agent_runs],
     )

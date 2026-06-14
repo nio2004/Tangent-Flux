@@ -113,6 +113,7 @@ def test_agent3_guard_and_memory_flow(client: TestClient):
     graph = initialized.json()["graph"]
     assert graph["nodes"]
     assert all("sourceIds" in node for node in graph["nodes"])
+    assert all("evidence" in node for node in graph["nodes"])
     assert all(node["memberCount"] > 0 for node in graph["nodes"])
     assert all("sharedEvidenceCount" in edge for edge in graph["edges"])
 
