@@ -1,0 +1,156 @@
+[   13273ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:20102
+[   14437ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4000/favicon.ico:0
+[   51331ms] [ERROR] In HTML, %s cannot be a descendant of <%s>.
+This will cause a hydration error.%s <button> button 
+
+  <App>
+    <div className="app-shell">
+      <Topbar>
+      <main>
+      <IdeaDetail idea={{id:"contex...", ...}} open={true} notes={"# Resear..."} cover={null} board={{todo:[...], ...}} ...>
+        <section className="detail-vie..." aria-hidden={false}>
+          <div className="detail-shell">
+            <aside>
+            <main className="detail-main">
+              <section>
+              <div className="studio-grid">
+                <section>
+                <MarkdownNotes>
+                <ResourceCarousel>
+                <KanbanWorkspace board={{todo:[...], ...}} expanded={true} ...>
+                  <section className="workspace-..." id="tasks">
+                    <div>
+>                   <button
+>                     className="kanban-preview-button"
+>                     type="button"
+>                     onClick={function onClick}
+>                     onKeyDown={function onKeyDown}
+>                     aria-label="Open expanded Kanban board"
+>                   >
+                      <div className="kanban" aria-label="Build task...">
+                        <section className="lane">
+                          <div>
+                          <div className="task-stack">
+                            <article className="task-card">
+                              <strong>
+                              <small>
+                              <div className="task-move-row">
+>                               <button type="button" onClick={function onClick} disabled={true}>
+                                ...
+                            ...
+                        ...
+                  ...
+                ...
+        ...
+      ...
+ @ http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:2155
+[   51334ms] [ERROR] <%s> cannot contain a nested %s.
+See this log for the ancestor stack trace. button <button> @ http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:2162
+[ 1300586ms] [ERROR] Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://localhost:4000/node_modules/.vite/deps/chunk-BVJBJJA6.js?v=b82fbfb3:391
+[ 1300620ms] [ERROR] Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://localhost:4000/node_modules/.vite/deps/chunk-BVJBJJA6.js?v=b82fbfb3:391
+[ 1300661ms] TypeError: Cannot read properties of null (reading 'useContext')
+    at exports.useContext (http://localhost:4000/node_modules/.vite/deps/chunk-BVJBJJA6.js?v=b82fbfb3:911:27)
+    at MotionDOMComponent (http://localhost:4000/node_modules/.vite/deps/framer-motion.js?v=48f59c0b:8985:40)
+    at Object.react_stack_bottom_frame (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:18509:20)
+    at renderWithHooks (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:5654:24)
+    at updateForwardRef (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:7198:21)
+    at beginWork (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:8735:20)
+    at runWithFiberInDEV (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:997:72)
+    at performUnitOfWork (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:12561:98)
+    at workLoopSync (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:12424:43)
+    at renderRootSync (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:12408:13)
+[ 1300645ms] [WARNING] %s
+
+%s
+ An error occurred in the <ForwardRef(motion.article)> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:6965
+[ 1301249ms] [ERROR] Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://localhost:4000/node_modules/.vite/deps/chunk-BVJBJJA6.js?v=b82fbfb3:391
+[ 1301277ms] [ERROR] Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://localhost:4000/node_modules/.vite/deps/chunk-BVJBJJA6.js?v=b82fbfb3:391
+[ 1301284ms] TypeError: Cannot read properties of null (reading 'useContext')
+    at exports.useContext (http://localhost:4000/node_modules/.vite/deps/chunk-BVJBJJA6.js?v=b82fbfb3:911:27)
+    at MotionDOMComponent (http://localhost:4000/node_modules/.vite/deps/framer-motion.js?v=48f59c0b:8985:40)
+    at Object.react_stack_bottom_frame (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:18509:20)
+    at renderWithHooks (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:5654:24)
+    at updateForwardRef (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:7198:21)
+    at beginWork (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:8735:20)
+    at runWithFiberInDEV (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:997:72)
+    at performUnitOfWork (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:12561:98)
+    at workLoopSync (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:12424:43)
+    at renderRootSync (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:12408:13)
+[ 1301279ms] [WARNING] %s
+
+%s
+ An error occurred in the <ForwardRef(motion.article)> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:6965
+[ 1301370ms] [ERROR] Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://localhost:4000/node_modules/.vite/deps/chunk-BVJBJJA6.js?v=b82fbfb3:391
+[ 1301392ms] [ERROR] Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://localhost:4000/node_modules/.vite/deps/chunk-BVJBJJA6.js?v=b82fbfb3:391
+[ 1301395ms] TypeError: Cannot read properties of null (reading 'useContext')
+    at exports.useContext (http://localhost:4000/node_modules/.vite/deps/chunk-BVJBJJA6.js?v=b82fbfb3:911:27)
+    at MotionDOMComponent (http://localhost:4000/node_modules/.vite/deps/framer-motion.js?v=48f59c0b:8985:40)
+    at Object.react_stack_bottom_frame (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:18509:20)
+    at renderWithHooks (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:5654:24)
+    at updateForwardRef (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:7198:21)
+    at beginWork (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:8735:20)
+    at runWithFiberInDEV (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:997:72)
+    at performUnitOfWork (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:12561:98)
+    at workLoopSync (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:12424:43)
+    at renderRootSync (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:12408:13)
+[ 1301394ms] [WARNING] %s
+
+%s
+ An error occurred in the <ForwardRef(motion.article)> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:6965
+[ 1301479ms] [ERROR] Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://localhost:4000/node_modules/.vite/deps/chunk-BVJBJJA6.js?v=b82fbfb3:391
+[ 1301502ms] [ERROR] Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://localhost:4000/node_modules/.vite/deps/chunk-BVJBJJA6.js?v=b82fbfb3:391
+[ 1301505ms] TypeError: Cannot read properties of null (reading 'useContext')
+    at exports.useContext (http://localhost:4000/node_modules/.vite/deps/chunk-BVJBJJA6.js?v=b82fbfb3:911:27)
+    at MotionDOMComponent (http://localhost:4000/node_modules/.vite/deps/framer-motion.js?v=48f59c0b:8985:40)
+    at Object.react_stack_bottom_frame (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:18509:20)
+    at renderWithHooks (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:5654:24)
+    at updateForwardRef (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:7198:21)
+    at beginWork (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:8735:20)
+    at runWithFiberInDEV (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:997:72)
+    at performUnitOfWork (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:12561:98)
+    at workLoopSync (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:12424:43)
+    at renderRootSync (http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:12408:13)
+[ 1301504ms] [WARNING] %s
+
+%s
+ An error occurred in the <ForwardRef(motion.article)> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=a2939d05:6965
+[ 1302598ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=b82fbfb3:20102
+[ 2251285ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:4000/node_modules/.vite/deps/react-dom_client.js?v=b82fbfb3:20102
+[ 5844721ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ chrome-error://chromewebdata/:0
+[ 5845025ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ chrome-error://chromewebdata/:0

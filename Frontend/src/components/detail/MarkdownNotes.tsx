@@ -13,11 +13,11 @@ export function MarkdownNotes({ value, onSave }: MarkdownNotesProps) {
   const [editing, setEditing] = useState(false);
 
   return (
-    <section className="workspace-panel notes-shell" id="notes">
+    <section className="workspace-panel notes-shell idea-dump-panel" id="notes">
       <div className="panel-heading">
         <div>
-          <p className="eyebrow">Markdown Notes</p>
-          <h3>Working context</h3>
+          <p className="eyebrow">Idea Dump</p>
+          <h3>Brainstorm surface</h3>
         </div>
         <Button variant="ghost" size="sm" onClick={() => setEditing((current) => !current)}>
           {editing ? <Eye size={16} aria-hidden="true" /> : <Edit3 size={16} aria-hidden="true" />}

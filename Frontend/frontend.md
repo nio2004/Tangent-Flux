@@ -4,7 +4,13 @@ This document explains the current frontend behavior and data expectations so a 
 
 ## Product Shape
 
-Tangent-Flux is a frontend-only React workspace right now. The first screen is a visual idea board. Each idea card opens into a focused research workspace with notes, resources, tasks, gallery artifacts, timeline entries, and studio controls.
+Tangent-Flux is a frontend-only React workspace right now. The first screen is a visual idea board. Each idea card opens into a focused research workspace with a banner-style overview, notes, resources, tasks, gallery artifacts, timeline entries, and studio controls.
+
+The detail workspace is organized into three major visual sections:
+
+- A framed insight surface with the scrollable Brainstorm/Idea Dump panel taking the main left column and Problem Statement plus Linked Evidence stacked on the right.
+- A Task and Context Mesh section with the Kanban task workspace beside the Architecture Gallery.
+- A Research Journal section rendered as a horizontal timeline with glowing log points and hover/focus detail reveal.
 
 The frontend currently uses local sample data and React state only. There is no backend, persistence, auth, routing, or file storage yet.
 
@@ -149,6 +155,8 @@ When a user clicks an idea card:
 
 The morph animation is purely visual. Backend work only needs to provide the selected idea and its related workspace data.
 
+The detail header uses `CoverDropzone` as a banner/background layer. The visible idea metadata comes from the selected `Idea`; status is no longer repeated as a title badge because tags are already rendered below the description.
+
 ### Quick Add
 
 `QuickAddDialog` collects:
@@ -206,6 +214,8 @@ Response: { "coverUrl": "https://..." }
 
 `ResourceCarousel` displays static `ResourcePreview[]` from `src/data/ideas.ts`.
 
+In the current layout, resources appear as the bottom card in the right rail of the first detail section, paired with the Problem Statement above it. This keeps the evidence close to the brainstorm notes without competing with the task/gallery section.
+
 Backend-ready behavior:
 
 - Resources should be linked to an idea.
@@ -230,6 +240,8 @@ DELETE /api/resources/:resourceId
 
 Tasks can be moved between lanes. `StudioControlsOverlay` can add a new task to `todo`.
 
+The preview board renders each lane as a stacked-card preview. The first task in each lane array is the visible top card. When a task is dragged or moved into a lane, `moveTask` prepends it to the target lane so the most recently moved task appears on top and older tasks sit behind it.
+
 Pure helper behavior lives in `src/lib/kanban.ts`:
 
 - `createTask(title, points)`
@@ -238,8 +250,8 @@ Pure helper behavior lives in `src/lib/kanban.ts`:
 Backend-ready behavior:
 
 - Tasks should be per idea.
-- Movement should persist lane/order.
-- Consider adding `sortOrder` because the frontend currently derives order from array position.
+- Movement should persist lane/order, with newest moved items placed first unless the backend later adds manual reordering.
+- Consider adding `sortOrder` because the frontend currently derives stack order from array position.
 
 Suggested endpoint:
 
@@ -261,7 +273,7 @@ Suggested move body:
 
 ### Timeline
 
-`TimelineWindow` shows a static list of timestamped entries in a three-item window.
+`TimelineWindow` shows a static list of timestamped entries as a horizontal research timeline. It opens on the latest five entries, supports left/right navigation, and renders each entry as a compact glowing log point. The entry text is revealed on hover or keyboard focus to keep the timeline scannable.
 
 Backend-ready behavior:
 
@@ -278,6 +290,8 @@ POST /api/ideas/:ideaId/timeline
 ### Gallery
 
 The gallery is static demo data. It represents architecture diagrams, prompt cards, product previews, or generated artifacts.
+
+The current Architecture Gallery uses arrow controls instead of text toggles. Long artifact titles are constrained and wrapped inside the gallery card so large headings do not overflow into neighboring layout columns.
 
 Backend-ready behavior:
 
@@ -433,4 +447,3 @@ node --test tests/*.test.ts
 ```
 
 The production build previously passed after dependency installation. The latest `vite.config.ts` sets `base: "./"` so the built app can use relative assets.
-
