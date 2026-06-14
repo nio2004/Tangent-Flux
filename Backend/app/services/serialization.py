@@ -84,7 +84,7 @@ def task_out(task: Task) -> TaskOut:
 
 def kanban_out(tasks: list[Task]) -> KanbanBoardOut:
     board = {"todo": [], "progress": [], "completed": []}
-    for task in sorted(tasks, key=lambda item: item.sort_order):
+    for task in sorted(tasks, key=lambda item: (item.sort_order, item.created_at)):
         board.setdefault(task.lane, []).append(task_out(task))
     return KanbanBoardOut(**board)
 

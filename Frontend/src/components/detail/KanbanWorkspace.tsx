@@ -20,6 +20,7 @@ const laneIds: KanbanLaneId[] = ["todo", "progress", "completed"];
 
 export function KanbanWorkspace({ board, expanded, onExpandedChange, onMoveTask }: KanbanWorkspaceProps) {
   const [draggingTask, setDraggingTask] = useState<string | null>(null);
+  const displayBoard = orderBoardForDisplay(board);
 
   function handleDrop(event: DragEvent<HTMLElement>, laneId: KanbanLaneId) {
     event.preventDefault();
@@ -83,10 +84,10 @@ export function KanbanWorkspace({ board, expanded, onExpandedChange, onMoveTask 
         >
           <div className="lane-heading">
             <h4>{laneLabels[laneId]}</h4>
-            <span>{board[laneId].length}</span>
+            <span>{displayBoard[laneId].length}</span>
           </div>
           <div className="task-stack">
-            {board[laneId].slice(0, 4).map((task, index) => (
+            {displayBoard[laneId].slice(0, 4).map((task, index) => (
               <div
                 className={index === 0 ? "task-stack-layer active" : "task-stack-layer"}
                 key={task.id}
@@ -95,7 +96,7 @@ export function KanbanWorkspace({ board, expanded, onExpandedChange, onMoveTask 
                 {renderTaskCard(task, laneId, true)}
               </div>
             ))}
-            {board[laneId].length === 0 ? <p className="empty-lane">Drop tasks here</p> : null}
+            {displayBoard[laneId].length === 0 ? <p className="empty-lane">Drop tasks here</p> : null}
           </div>
         </section>
       ))}
@@ -113,11 +114,11 @@ export function KanbanWorkspace({ board, expanded, onExpandedChange, onMoveTask 
         >
           <div className="lane-heading">
             <h4>{laneLabels[laneId]}</h4>
-            <span>{board[laneId].length}</span>
+            <span>{displayBoard[laneId].length}</span>
           </div>
           <div className="expanded-task-list">
-            {board[laneId].map((task) => renderTaskCard(task, laneId))}
-            {board[laneId].length === 0 ? <p className="empty-lane">Drop tasks here</p> : null}
+            {displayBoard[laneId].map((task) => renderTaskCard(task, laneId))}
+            {displayBoard[laneId].length === 0 ? <p className="empty-lane">Drop tasks here</p> : null}
           </div>
         </section>
       ))}
@@ -163,4 +164,16 @@ export function KanbanWorkspace({ board, expanded, onExpandedChange, onMoveTask 
       )}
     </>
   );
+}
+
+function orderBoardForDisplay(board: KanbanBoard): KanbanBoard {
+  return {
+    todo: orderLaneForDisplay(board.todo),
+    progress: orderLaneForDisplay(board.progress),
+    completed: orderLaneForDisplay(board.completed),
+  };
+}
+
+function orderLaneForDisplay(tasks: KanbanTask[]) {
+  return [...tasks].reverse();
 }

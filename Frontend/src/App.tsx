@@ -163,7 +163,7 @@ function App() {
     }
     try {
       const created = await addTaskApi(selectedIdea.id, task.title, task.points);
-      setBoard((current) => ({ ...current, todo: [created, ...current.todo] }));
+      setBoard((current) => ({ ...current, todo: [...current.todo, created] }));
       await refreshSelectedWorkspace();
     } catch (error) {
       setWorkspaceError(error instanceof Error ? error.message : "Task could not be saved.");

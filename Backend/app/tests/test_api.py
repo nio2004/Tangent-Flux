@@ -197,6 +197,36 @@ def test_cover_image_persists_in_workspace(client: TestClient):
     assert workspace.json()["coverUrl"] == cover_url
 
 
+def test_task_move_appends_to_target_lane(client: TestClient):
+    idea = client.post(
+        "/api/ideas",
+        json={
+            "title": "Task Append Test",
+            "description": "Testing task stack ordering.",
+            "problem": "Moved tasks should remain the latest appended item after refresh.",
+            "tags": ["Test"],
+        },
+    ).json()
+    idea_id = idea["id"]
+
+    existing = client.post(
+        f"/api/ideas/{idea_id}/tasks",
+        json={"title": "Existing completed task", "lane": "completed", "points": 1},
+    ).json()
+    moved = client.post(
+        f"/api/ideas/{idea_id}/tasks",
+        json={"title": "Moved task", "lane": "todo", "points": 2},
+    ).json()
+
+    move = client.post(f"/api/tasks/{moved['id']}/move", json={"lane": "completed"})
+    assert move.status_code == 200
+
+    workspace = client.get(f"/api/ideas/{idea_id}/workspace")
+    assert workspace.status_code == 200
+    completed = workspace.json()["tasks"]["completed"]
+    assert [task["id"] for task in completed] == [existing["id"], moved["id"]]
+
+
 def test_failed_resource_is_not_persisted(client: TestClient):
     idea = client.post(
         "/api/ideas",
