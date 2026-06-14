@@ -17,6 +17,10 @@ class NoteUpdate(BaseModel):
     title: str = "Research brief"
 
 
+class CoverUpdate(BaseModel):
+    coverUrl: str | None = None
+
+
 class TimelineOut(BaseModel):
     id: str
     time: str

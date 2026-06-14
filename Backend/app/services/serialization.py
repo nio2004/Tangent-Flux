@@ -28,6 +28,7 @@ def idea_out(db: Session, idea: Idea) -> IdeaOut:
         texture=idea.texture,
         problem=idea.problem,
         memoryState=idea.memory_state,
+        coverUrl=idea.cover_url,
     )
 
 

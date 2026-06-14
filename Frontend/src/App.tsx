@@ -7,7 +7,7 @@ import { Topbar } from "./components/layout/Topbar.tsx";
 import { QuickAddDialog } from "./components/quick-add/QuickAddDialog.tsx";
 import { gallery as sampleGallery, ideas as initialIdeas, initialKanban, resources as sampleResources, starterNotes, timeline as sampleTimeline } from "./data/ideas.ts";
 import { createIdea as createIdeaApi, fetchGraphOverview, fetchIdeas, fetchWorkspace, initializeMemory } from "./api/ideas.ts";
-import { addTask as addTaskApi, moveTask as moveTaskApi, saveIdeaNotes } from "./api/workspace.ts";
+import { addTask as addTaskApi, moveTask as moveTaskApi, saveCoverImage, saveIdeaNotes } from "./api/workspace.ts";
 import { moveTask } from "./lib/kanban.ts";
 import type {
   GallerySlide,
@@ -214,6 +214,24 @@ function App() {
     }
   }
 
+  async function handleCoverChange(nextCover: string) {
+    setCover(nextCover);
+    if (!selectedIdea) {
+      return;
+    }
+
+    setWorkspaceError(null);
+    try {
+      const saved = await saveCoverImage(selectedIdea.id, nextCover);
+      setCover(saved.coverUrl);
+      setIdeas((currentIdeas) =>
+        currentIdeas.map((idea) => (idea.id === selectedIdea.id ? { ...idea, coverUrl: saved.coverUrl } : idea)),
+      );
+    } catch (error) {
+      setWorkspaceError(error instanceof Error ? error.message : "Cover image could not be saved.");
+    }
+  }
+
   return (
     <div className="app-shell">
       <Topbar
@@ -273,7 +291,7 @@ function App() {
           error={workspaceError}
           onClose={closeDetail}
           onNotesSave={handleNotesSave}
-          onCoverChange={setCover}
+          onCoverChange={handleCoverChange}
           onMoveTask={handleMoveTask}
           onAddTask={handleAddTask}
           onWorkspaceChange={refreshSelectedWorkspace}

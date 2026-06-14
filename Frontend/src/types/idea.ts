@@ -24,6 +24,7 @@ export interface Idea {
   importance: number;
   texture: string;
   problem: string;
+  coverUrl?: string | null;
   memoryState?: string;
   initialSource?: string;
   quickNote?: string;
