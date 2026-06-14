@@ -1,7 +1,7 @@
-import { Bot, CheckCircle2, GitBranch, Image, Layers3, Link, MessageSquarePlus, Search, Send, Sparkles, X } from "lucide-react";
+import { Bot, CheckCircle2, GitBranch, Image, Layers3, Link, MessageSquarePlus, Search, Sparkles, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createChatSession, fetchChatSession, fetchChatSessions, fetchProjectMemory, generateIdeaCards, selectIdeaCard, sendIdeaAgentMessage } from "../../api/chat.ts";
-import type { ChatMessage, ChatSession, Idea, IdeaAgentCard, ProjectMemory, ProjectMemoryEvent } from "../../types/idea.ts";
+import { createChatSession, fetchChatSession, fetchChatSessions, fetchProjectMemory, generateIdeaCardDetail, generateIdeaCards, selectIdeaCard } from "../../api/chat.ts";
+import type { ChatMessage, ChatSession, Idea, IdeaAgentCard, ProjectMemory } from "../../types/idea.ts";
 import { Button } from "../ui/button.tsx";
 
 interface IdeaAgentOverlayProps {
@@ -17,15 +17,13 @@ export function IdeaAgentOverlay({ open, idea, onClose, onWorkspaceChange }: Ide
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(null);
-  const [ideaPrompt, setIdeaPrompt] = useState("Generate the strongest build ideas from this memory, using current web context where it matters.");
+  const [lastPrompt, setLastPrompt] = useState("Generate the strongest build ideas from this memory, using current web context where it matters.");
   const [cards, setCards] = useState<IdeaAgentCard[]>([]);
   const [selectedCard, setSelectedCard] = useState<IdeaAgentCard | null>(null);
   const [projectMemory, setProjectMemory] = useState<ProjectMemory | null>(null);
-  const [projectEvents, setProjectEvents] = useState<ProjectMemoryEvent[]>([]);
   const [groundingCount, setGroundingCount] = useState(0);
   const [generatingCards, setGeneratingCards] = useState(false);
+  const [detailingCardId, setDetailingCardId] = useState<string | null>(null);
   const [applyingCardId, setApplyingCardId] = useState<string | null>(null);
   const [appliedCardId, setAppliedCardId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +42,7 @@ export function IdeaAgentOverlay({ open, idea, onClose, onWorkspaceChange }: Ide
 
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
-  }, [messages, pendingUserMessage, sending]);
+  }, [messages]);
 
   async function loadSessions() {
     setLoading(true);
@@ -90,6 +88,12 @@ export function IdeaAgentOverlay({ open, idea, onClose, onWorkspaceChange }: Ide
       setSessions((current) => [session, ...current]);
       setActiveSession(session);
       setMessages([]);
+      setInput("");
+      setCards([]);
+      setSelectedCard(null);
+      setGroundingCount(0);
+      setAppliedCardId(null);
+      setDetailingCardId(null);
       window.localStorage.setItem(sessionStorageKey, session.id);
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : "Could not create chat session.");
@@ -98,53 +102,19 @@ export function IdeaAgentOverlay({ open, idea, onClose, onWorkspaceChange }: Ide
     }
   }
 
-  async function sendMessage() {
-    const content = input.trim();
-    if (!content || sending || !canChat) {
-      return;
-    }
-    setSending(true);
-    setPendingUserMessage(content);
-    setError(null);
-    setInput("");
-    try {
-      const response = await sendIdeaAgentMessage(idea.id, content, activeSession?.id, projectMemory?.id);
-      setActiveSession(response.session);
-      setSessions((current) => [response.session, ...current.filter((session) => session.id !== response.session.id)]);
-      setMessages((current) => [...current, response.userMessage, response.assistantMessage]);
-      window.localStorage.setItem(sessionStorageKey, response.session.id);
-    } catch (sendError) {
-      setError(sendError instanceof Error ? sendError.message : "Agent could not answer.");
-      setInput(content);
-    } finally {
-      setSending(false);
-      setPendingUserMessage(null);
-    }
-  }
-
-  async function loadProjectMemory() {
-    try {
-      const payload = await fetchProjectMemory(idea.id);
-      setProjectMemory(payload.projectMemory);
-      setProjectEvents(payload.recentEvents);
-    } catch {
-      setProjectMemory(null);
-      setProjectEvents([]);
-    }
-  }
-
   async function handleGenerateCards() {
-    const prompt = ideaPrompt.trim();
-    if (!prompt || generatingCards || !canChat) {
+    const content = input.trim();
+    if (!content || generatingCards || !canChat) {
       return;
     }
     setGeneratingCards(true);
     setAppliedCardId(null);
     setError(null);
+    setLastPrompt(content);
     try {
-      const response = await generateIdeaCards(idea.id, prompt);
+      const response = await generateIdeaCards(idea.id, content);
       setCards(response.cards);
-      setSelectedCard(response.cards[0] ?? null);
+      setSelectedCard(null);
       setGroundingCount(response.grounding.length);
     } catch (cardError) {
       setError(cardError instanceof Error ? cardError.message : "Idea cards could not be generated.");
@@ -153,7 +123,36 @@ export function IdeaAgentOverlay({ open, idea, onClose, onWorkspaceChange }: Ide
     }
   }
 
-  async function handleSelectCard(card: IdeaAgentCard) {
+  async function loadProjectMemory() {
+    try {
+      const payload = await fetchProjectMemory(idea.id);
+      setProjectMemory(payload.projectMemory);
+    } catch {
+      setProjectMemory(null);
+    }
+  }
+
+  async function handleOpenCard(card: IdeaAgentCard) {
+    setSelectedCard(card);
+    const hasDetails = Boolean(card.whyNow && card.fitReason && card.firstTasks.length);
+    if (hasDetails || detailingCardId) {
+      return;
+    }
+    setDetailingCardId(card.id);
+    setError(null);
+    try {
+      const response = await generateIdeaCardDetail(idea.id, lastPrompt, card);
+      setCards((current) => current.map((item) => (item.id === card.id ? response.card : item)));
+      setSelectedCard(response.card);
+      setGroundingCount(response.grounding.length);
+    } catch (cardError) {
+      setError(cardError instanceof Error ? cardError.message : "Card details could not be generated.");
+    } finally {
+      setDetailingCardId(null);
+    }
+  }
+
+  async function handleApplyCard(card: IdeaAgentCard) {
     setApplyingCardId(card.id);
     setError(null);
     try {
@@ -220,47 +219,15 @@ export function IdeaAgentOverlay({ open, idea, onClose, onWorkspaceChange }: Ide
                 <span>{activeSession ? activeSession.messageCount : 0} saved messages</span>
                 <span>{projectMemory ? "Using local project memory first" : "Using parent idea memory"}</span>
               </div>
-              {projectMemory && (
-                <section className="agent-project-memory" aria-label="Project memory">
-                  <div>
-                    <p className="eyebrow">Project Memory</p>
-                    <h3>{projectMemory.title}</h3>
-                    <span>{projectMemory.mainTopic}</span>
+              {cards.length > 0 ? (
+                <section className="agent-idea-lab" aria-label="Idea generation cards">
+                  <div className="agent-lab-heading">
+                    <div>
+                      <p className="eyebrow">Generated Ideas</p>
+                      <h3>Ranked idea cards</h3>
+                    </div>
+                    <span>{groundingCount ? `${groundingCount} grounded sources` : "memory + web ready"}</span>
                   </div>
-                  <p>{projectMemory.textualSummary}</p>
-                  {projectEvents.length > 0 && (
-                    <ul>
-                      {projectEvents.slice(0, 4).map((event) => (
-                        <li key={event.id}>
-                          <strong>{event.eventType.replace(/_/g, " ")}</strong>
-                          <span>{event.content}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </section>
-              )}
-              <section className="agent-idea-lab" aria-label="Idea generation cards">
-                <div className="agent-lab-heading">
-                  <div>
-                    <p className="eyebrow">Generate Ideas</p>
-                    <h3>Ranked idea cards</h3>
-                  </div>
-                  <span>{groundingCount ? `${groundingCount} grounded sources` : "memory + web ready"}</span>
-                </div>
-                <div className="agent-card-prompt">
-                  <textarea
-                    value={ideaPrompt}
-                    onChange={(event) => setIdeaPrompt(event.target.value)}
-                    rows={2}
-                    placeholder="Describe the ideas you want the agent to filter and rank..."
-                  />
-                  <Button variant="hot" onClick={handleGenerateCards} disabled={generatingCards || !ideaPrompt.trim()}>
-                    <Search size={16} aria-hidden="true" />
-                    <span>{generatingCards ? "Generating" : "Generate cards"}</span>
-                  </Button>
-                </div>
-                {cards.length > 0 && (
                   <div className="agent-card-workspace">
                     <div className="agent-card-list">
                       {cards.map((card) => (
@@ -268,7 +235,7 @@ export function IdeaAgentOverlay({ open, idea, onClose, onWorkspaceChange }: Ide
                           key={card.id}
                           type="button"
                           className={selectedCard?.id === card.id ? "is-active" : ""}
-                          onClick={() => setSelectedCard(card)}
+                          onClick={() => handleOpenCard(card)}
                         >
                           <span>
                             <Sparkles size={14} aria-hidden="true" />
@@ -276,6 +243,7 @@ export function IdeaAgentOverlay({ open, idea, onClose, onWorkspaceChange }: Ide
                           </span>
                           <strong>{card.title}</strong>
                           <small>{card.mainTopic}</small>
+                          <p>{card.summary}</p>
                         </button>
                       ))}
                     </div>
@@ -286,10 +254,16 @@ export function IdeaAgentOverlay({ open, idea, onClose, onWorkspaceChange }: Ide
                             <p>{selectedCard.mainTopic}</p>
                             <h4>{selectedCard.title}</h4>
                           </div>
-                          <Button variant="hot" onClick={() => handleSelectCard(selectedCard)} disabled={applyingCardId === selectedCard.id}>
+                          <Button
+                            variant="hot"
+                            onClick={() => handleApplyCard(selectedCard)}
+                            disabled={applyingCardId === selectedCard.id || detailingCardId === selectedCard.id || !selectedCard.firstTasks.length}
+                          >
                             <Layers3 size={16} aria-hidden="true" />
                             <span>
-                              {appliedCardId === selectedCard.id
+                              {detailingCardId === selectedCard.id
+                                ? "Loading"
+                                : appliedCardId === selectedCard.id
                                 ? "Added"
                                 : applyingCardId === selectedCard.id
                                   ? "Adding"
@@ -298,43 +272,57 @@ export function IdeaAgentOverlay({ open, idea, onClose, onWorkspaceChange }: Ide
                           </Button>
                         </div>
                         <p>{selectedCard.summary}</p>
-                        <div className="agent-card-grid">
-                          <section>
-                            <h5>Why now</h5>
-                            <p>{selectedCard.whyNow}</p>
-                          </section>
-                          <section>
-                            <h5>Fit</h5>
-                            <p>{selectedCard.fitReason}</p>
-                          </section>
-                        </div>
-                        <div className="agent-card-columns">
-                          <section>
-                            <h5>Evidence</h5>
-                            <ul>{selectedCard.evidence.map((item) => <li key={item}>{item}</li>)}</ul>
-                          </section>
-                          <section>
-                            <h5>Risks</h5>
-                            <ul>{selectedCard.risks.map((item) => <li key={item}>{item}</li>)}</ul>
-                          </section>
-                          <section>
-                            <h5>Kanban TODOs</h5>
-                            <ul>
-                              {selectedCard.firstTasks.map((task) => (
-                                <li key={`${selectedCard.id}-${task.title}`}>
-                                  <CheckCircle2 size={13} aria-hidden="true" />
-                                  <span>{task.title}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </section>
-                        </div>
+                        {detailingCardId === selectedCard.id ? (
+                          <div className="agent-detail-loading" aria-live="polite">
+                            <span className="agent-spinner" aria-hidden="true" />
+                            <p>Generating deep-dive details...</p>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="agent-card-grid">
+                              <section>
+                                <h5>Why now</h5>
+                                <p>{selectedCard.whyNow}</p>
+                              </section>
+                              <section>
+                                <h5>Fit</h5>
+                                <p>{selectedCard.fitReason}</p>
+                              </section>
+                            </div>
+                            <div className="agent-card-columns">
+                              <section>
+                                <h5>Evidence</h5>
+                                <ul>{selectedCard.evidence.map((item) => <li key={item}>{item}</li>)}</ul>
+                              </section>
+                              <section>
+                                <h5>Risks</h5>
+                                <ul>{selectedCard.risks.map((item) => <li key={item}>{item}</li>)}</ul>
+                              </section>
+                              <section>
+                                <h5>Kanban TODOs</h5>
+                                <ul>
+                                  {selectedCard.firstTasks.map((task) => (
+                                    <li key={`${selectedCard.id}-${task.title}`}>
+                                      <CheckCircle2 size={13} aria-hidden="true" />
+                                      <span>{task.title}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </section>
+                            </div>
+                          </>
+                        )}
                       </article>
                     )}
                   </div>
-                )}
-              </section>
-              <div className="agent-message-list">
+                </section>
+              ) : (
+                <div className="agent-empty">
+                  <Bot size={26} aria-hidden="true" />
+                  <p>Describe the build ideas you want. The agent will return compact ranked cards first.</p>
+                </div>
+              )}
+              <div className="agent-message-list is-hidden">
                 {messages.map((message) => (
                   <article key={message.id} className={message.role === "user" ? "agent-message is-user" : "agent-message"}>
                     <div className="agent-message-content">{renderMessageContent(message.content)}</div>
@@ -350,24 +338,7 @@ export function IdeaAgentOverlay({ open, idea, onClose, onWorkspaceChange }: Ide
                     )}
                   </article>
                 ))}
-                {pendingUserMessage && (
-                  <article className="agent-message is-user is-pending">
-                    <div className="agent-message-content"><p>{pendingUserMessage}</p></div>
-                  </article>
-                )}
-                {sending && (
-                  <article className="agent-message is-thinking" aria-live="polite">
-                    <span className="agent-spinner" aria-hidden="true" />
-                    <p>Thinking through this idea's memory...</p>
-                  </article>
-                )}
                 <div ref={messageEndRef} />
-                {!messages.length && !loading && !sending && !pendingUserMessage && (
-                  <div className="agent-empty">
-                    <Bot size={26} aria-hidden="true" />
-                    <p>Ask about relationships between papers, links, graph nodes, and uploaded image descriptions.</p>
-                  </div>
-                )}
               </div>
               <div className="agent-composer">
                 <textarea
@@ -376,15 +347,15 @@ export function IdeaAgentOverlay({ open, idea, onClose, onWorkspaceChange }: Ide
                   onKeyDown={(event) => {
                     if (event.key === "Enter" && !event.shiftKey) {
                       event.preventDefault();
-                      sendMessage();
+                      handleGenerateCards();
                     }
                   }}
                   rows={3}
-                  placeholder="Ask this idea's agent..."
+                  placeholder="Generate build ideas from this memory..."
                 />
-                <Button variant="hot" onClick={sendMessage} disabled={sending || !input.trim()}>
-                  <Send size={16} aria-hidden="true" />
-                  <span>{sending ? "Thinking" : "Send"}</span>
+                <Button variant="hot" onClick={handleGenerateCards} disabled={generatingCards || !input.trim()}>
+                  <Search size={16} aria-hidden="true" />
+                  <span>{generatingCards ? "Generating" : "Generate"}</span>
                 </Button>
               </div>
             </>

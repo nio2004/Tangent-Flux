@@ -118,6 +118,21 @@ async def generate_idea_cards(db: Session, idea: Idea, prompt: str) -> tuple[lis
     return cards, sources[:8]
 
 
+async def generate_idea_card_detail(
+    db: Session,
+    idea: Idea,
+    prompt: str,
+    card: IdeaAgentCardOut,
+) -> tuple[IdeaAgentCardOut, list[ChatSourceOut]]:
+    memory = assert_memory_ready(db, idea)
+    nodes = db.query(GraphNode).filter(GraphNode.idea_id == idea.id).all()
+    sources = _rank_sources(db, idea, f"{prompt} {card.title} {card.summary}")
+    detailed = _try_generate_card_detail_with_model(idea, memory, nodes, sources, prompt, card)
+    if not detailed:
+        detailed = _fallback_card_detail(idea, memory, nodes, sources, prompt, card)
+    return detailed, sources[:8]
+
+
 def select_idea_card(db: Session, idea: Idea, card: IdeaAgentCardOut):
     assert_memory_ready(db, idea)
     created = []
@@ -277,13 +292,13 @@ def _try_generate_cards_with_model(
     node_context = "\n".join(f"- {node.label}: {node.summary}" for node in nodes[:12])
     source_context = "\n".join(f"- [{source.kind}] {source.title}: {source.excerpt}" for source in sources[:10])
     request = (
-        "Generate 3-5 buildable idea cards for this Tangent-Flux idea. "
-        "Filter for strongest fit to the user's request, local memory, and current web context. "
+        "Generate 3-5 compact buildable idea cards for this Tangent-Flux idea. "
+        "This is the fast first pass only. Filter for strongest fit to the user's request, local memory, and current web context. "
         "Use web search for latest information when useful. Return only JSON matching this shape: "
         '{"cards":[{"id":"short-slug","title":"...","mainTopic":"...","summary":"...",'
-        '"whyNow":"...","fitReason":"...","evidence":["..."],"risks":["..."],'
-        '"firstTasks":[{"title":"...","description":"...","points":2}],"score":0.82}]}. '
-        "Make tasks concrete Kanban TODOs. Do not include markdown outside JSON.\n\n"
+        '"score":0.82}]}. '
+        "The summary must be 1-2 sentences. Do not include whyNow, fitReason, evidence, risks, or tasks yet. "
+        "Do not include markdown outside JSON.\n\n"
         f"Idea: {idea.title}\nProblem: {idea.problem}\nDescription: {idea.description}\n"
         f"Textual memory:\n{memory.textual_summary}\n\nGraph nodes:\n{node_context}\n\n"
         f"Ranked local evidence:\n{source_context}\n\nUser request:\n{prompt}"
@@ -350,6 +365,81 @@ def _cards_from_payload(payload: dict) -> list[IdeaAgentCardOut]:
     return result
 
 
+def _try_generate_card_detail_with_model(
+    idea: Idea,
+    memory: IdeaMemory,
+    nodes: list[GraphNode],
+    sources: list[ChatSourceOut],
+    prompt: str,
+    card: IdeaAgentCardOut,
+) -> IdeaAgentCardOut | None:
+    settings = get_settings()
+    if not settings.openai_api_key:
+        return None
+    node_context = "\n".join(f"- {node.label}: {node.summary}" for node in nodes[:12])
+    source_context = "\n".join(f"- [{source.kind}] {source.title}: {source.excerpt}" for source in sources[:10])
+    request = (
+        "Generate the deep-dive detail for exactly one selected Tangent-Flux idea card. "
+        "Keep the original title, mainTopic, summary, id, and score unless a small correction is required. "
+        "Return only JSON matching this shape: "
+        '{"card":{"id":"...","title":"...","mainTopic":"...","summary":"...",'
+        '"whyNow":"...","fitReason":"...","evidence":["..."],"risks":["..."],'
+        '"firstTasks":[{"title":"...","description":"...","points":2}],"score":0.82}}. '
+        "Evidence should name grounded memory, graph, web, or source facts. "
+        "Risks should be actionable. firstTasks must be concrete Kanban TODOs. "
+        "Do not include markdown outside JSON.\n\n"
+        f"Idea: {idea.title}\nProblem: {idea.problem}\nDescription: {idea.description}\n"
+        f"Textual memory:\n{memory.textual_summary}\n\nGraph nodes:\n{node_context}\n\n"
+        f"Ranked local evidence:\n{source_context}\n\nOriginal user request:\n{prompt}\n\n"
+        f"Selected compact card JSON:\n{card.model_dump_json()}"
+    )
+    try:
+        from openai import OpenAI
+
+        client = OpenAI(api_key=settings.openai_api_key)
+        tools = [{"type": "web_search_preview"}] if settings.openai_enable_web_search else None
+        response = client.responses.create(
+            model=settings.openai_idea_generation_model,
+            tools=tools,
+            input=request,
+        )
+        text = getattr(response, "output_text", None) or ""
+        payload = _extract_json_object(text)
+        card_payload = payload.get("card", payload) if isinstance(payload, dict) else {}
+        cards = _cards_from_payload({"cards": [card_payload]})
+        return cards[0] if cards else None
+    except Exception:
+        return None
+
+
+def _fallback_card_detail(
+    idea: Idea,
+    memory: IdeaMemory,
+    nodes: list[GraphNode],
+    sources: list[ChatSourceOut],
+    prompt: str,
+    card: IdeaAgentCardOut,
+) -> IdeaAgentCardOut:
+    evidence = [source.title for source in sources[:5] if source.title]
+    topic = card.mainTopic or (nodes[0].label if nodes else idea.title)
+    return IdeaAgentCardOut(
+        id=card.id,
+        title=card.title,
+        mainTopic=topic,
+        summary=card.summary or memory.textual_summary[:220],
+        whyNow="This direction is supported by current local memory and should be validated against fresh evidence before deeper commitment.",
+        fitReason=f"Matches the request '{prompt[:120]}' through the '{topic}' memory cluster and the selected idea's problem framing.",
+        evidence=evidence or [idea.title],
+        risks=["Needs current-market validation", "Scope may need pruning after first prototype", "Evidence quality should be checked before roadmap commitment"],
+        firstTasks=[
+            IdeaCardTaskOut(title=f"Validate {topic} assumptions", description="Check recent sources and list acceptance criteria.", points=2),
+            IdeaCardTaskOut(title=f"Prototype {topic} workflow", description="Build the smallest artifact that proves this direction.", points=3),
+            IdeaCardTaskOut(title="Review evidence and decide next branch", description="Compare results against memory graph evidence.", points=1),
+        ],
+        score=card.score or 0.72,
+    )
+
+
 def _fallback_idea_cards(
     idea: Idea,
     memory: IdeaMemory,
@@ -368,15 +458,11 @@ def _fallback_idea_cards(
                 title=title,
                 mainTopic=node.label,
                 summary=node.summary or memory.textual_summary[:220],
-                whyNow="This direction is supported by the current idea memory and should be tested against fresh sources before commitment.",
-                fitReason=f"Matches the request '{prompt[:120]}' through the '{node.label}' memory cluster.",
-                evidence=evidence or [idea.title],
-                risks=["Needs current-market validation", "Scope may need pruning after first prototype"],
-                firstTasks=[
-                    IdeaCardTaskOut(title=f"Validate {node.label} assumptions", description="Check latest sources and list acceptance criteria.", points=2),
-                    IdeaCardTaskOut(title=f"Prototype {node.label} workflow", description="Build the smallest artifact that proves this direction.", points=3),
-                    IdeaCardTaskOut(title="Review evidence and decide next branch", description="Compare results against memory graph evidence.", points=1),
-                ],
+                whyNow="",
+                fitReason="",
+                evidence=[],
+                risks=[],
+                firstTasks=[],
                 score=max(0.55, 0.9 - index * 0.08),
             )
         )

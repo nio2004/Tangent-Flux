@@ -80,6 +80,16 @@ class IdeaCardSelectRequest(BaseModel):
     card: IdeaAgentCardOut
 
 
+class IdeaCardDetailRequest(BaseModel):
+    prompt: str = Field(min_length=1)
+    card: IdeaAgentCardOut
+
+
+class IdeaCardDetailResponse(BaseModel):
+    card: IdeaAgentCardOut
+    grounding: list[ChatSourceOut] = []
+
+
 class IdeaCardSelectResponse(BaseModel):
     card: IdeaAgentCardOut
     tasks: list[TaskOut]

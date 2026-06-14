@@ -217,6 +217,11 @@ export interface IdeaCardGenerateResponse {
   grounding: ChatSource[];
 }
 
+export interface IdeaCardDetailResponse {
+  card: IdeaAgentCard;
+  grounding: ChatSource[];
+}
+
 export interface IdeaCardSelectResponse {
   card: IdeaAgentCard;
   tasks: KanbanTask[];

@@ -11,6 +11,8 @@ from app.schemas.chat import (
     ChatSessionOut,
     IdeaCardGenerateRequest,
     IdeaCardGenerateResponse,
+    IdeaCardDetailRequest,
+    IdeaCardDetailResponse,
     IdeaCardSelectRequest,
     IdeaCardSelectResponse,
 )
@@ -18,6 +20,7 @@ from app.schemas.project_memory import ProjectMemoryEventCreate, ProjectMemoryEv
 from app.services.chat_service import (
     chat_with_idea_agent,
     create_chat_session,
+    generate_idea_card_detail,
     generate_idea_cards,
     get_or_create_session,
     list_chat_messages,
@@ -75,6 +78,13 @@ async def idea_cards(idea_id: str, payload: IdeaCardGenerateRequest, db: Session
     idea = _get_idea(db, idea_id)
     cards, grounding = await generate_idea_cards(db, idea, payload.prompt)
     return IdeaCardGenerateResponse(cards=cards, grounding=grounding)
+
+
+@router.post("/{idea_id}/chat/idea-cards/detail", response_model=IdeaCardDetailResponse)
+async def idea_card_detail(idea_id: str, payload: IdeaCardDetailRequest, db: Session = Depends(get_db)):
+    idea = _get_idea(db, idea_id)
+    card, grounding = await generate_idea_card_detail(db, idea, payload.prompt, payload.card)
+    return IdeaCardDetailResponse(card=card, grounding=grounding)
 
 
 @router.post("/{idea_id}/chat/idea-cards/select", response_model=IdeaCardSelectResponse)

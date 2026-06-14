@@ -1,5 +1,5 @@
 import { request } from "./client.ts";
-import type { ChatResponse, ChatSession, ChatSessionDetail, IdeaAgentCard, IdeaCardGenerateResponse, IdeaCardSelectResponse, ProjectMemoryPayload } from "../types/idea.ts";
+import type { ChatResponse, ChatSession, ChatSessionDetail, IdeaAgentCard, IdeaCardDetailResponse, IdeaCardGenerateResponse, IdeaCardSelectResponse, ProjectMemoryPayload } from "../types/idea.ts";
 
 export function fetchChatSessions(ideaId: string): Promise<ChatSession[]> {
   return request<ChatSession[]>(`/ideas/${ideaId}/chat/sessions`);
@@ -32,6 +32,13 @@ export function generateIdeaCards(ideaId: string, prompt: string): Promise<IdeaC
   return request<IdeaCardGenerateResponse>(`/ideas/${ideaId}/chat/idea-cards`, {
     method: "POST",
     body: JSON.stringify({ prompt }),
+  });
+}
+
+export function generateIdeaCardDetail(ideaId: string, prompt: string, card: IdeaAgentCard): Promise<IdeaCardDetailResponse> {
+  return request<IdeaCardDetailResponse>(`/ideas/${ideaId}/chat/idea-cards/detail`, {
+    method: "POST",
+    body: JSON.stringify({ prompt, card }),
   });
 }
 

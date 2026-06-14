@@ -252,13 +252,15 @@ function App() {
       <div className="app-shell">
         {introVisible && <IntroLoader />}
 
-        <Topbar
-          query={query}
-          onQueryChange={setQuery}
-          onQuickAdd={() => setQuickAddOpen(true)}
-          activeView={activeView}
-          onViewChange={setActiveView}
-        />
+        {!detailOpen && (
+          <Topbar
+            query={query}
+            onQueryChange={setQuery}
+            onQuickAdd={() => setQuickAddOpen(true)}
+            activeView={activeView}
+            onViewChange={setActiveView}
+          />
+        )}
 
         <LandingHero
           onQuickAdd={() => setQuickAddOpen(true)}
@@ -441,7 +443,14 @@ function LandingHero({ onQuickAdd, onExploreGraph }: LandingHeroProps) {
             <img src={tangentFluxLogo} alt="" />
             <span>Tangent-Flux</span>
           </div>
-          <h1 id="landing-title">Your ideas finally thinking together!</h1>
+          <h1 id="landing-title">
+            <span>Your</span>
+            <span>ideas</span>
+            <span>finally</span>
+            <span>thinking</span>
+            <span>together!</span>
+            <span className="blinking-cursor" aria-hidden="true"></span>
+          </h1>
         </div>
 
         <div className="pitch-panel" aria-label="Tangent-Flux pitch">
