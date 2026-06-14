@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import type { MouseEvent } from "react";
 import { useState } from "react";
 import type { ResourcePreview } from "../../types/idea.ts";
 import { Button } from "../ui/button.tsx";
@@ -14,6 +15,18 @@ export function ResourceCarousel({ resources }: ResourceCarouselProps) {
 
   function move(direction: number) {
     setResourceIndex((current) => (current + direction + resources.length) % resources.length);
+  }
+
+  function showNextResource() {
+    setResourceIndex((current) => (current + 1) % resources.length);
+  }
+
+  function openResource(event: MouseEvent<HTMLButtonElement>, resource: ResourcePreview) {
+    event.stopPropagation();
+    if (!resource.sourceUrl) {
+      return;
+    }
+    window.open(resource.sourceUrl, "_blank", "noopener,noreferrer");
   }
 
   return (
@@ -40,11 +53,18 @@ export function ResourceCarousel({ resources }: ResourceCarouselProps) {
             const active = offset === 0;
 
             return (
-              <motion.button
+              <motion.article
                 className={`resource-slide offset-${offset}`}
                 key={resource.title}
-                type="button"
-                onClick={() => setResourceIndex((resourceIndex + 1) % resources.length)}
+                role="button"
+                tabIndex={0}
+                onClick={showNextResource}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    showNextResource();
+                  }
+                }}
                 initial={{ opacity: 0, y: 24, rotate: -1 }}
                 animate={{
                   opacity: active ? 1 : offset === 1 ? 0.62 : 0.22,
@@ -66,10 +86,19 @@ export function ResourceCarousel({ resources }: ResourceCarouselProps) {
                 <h4>{resource.title}</h4>
                 <p>{resource.description}</p>
                 <div className="resource-meta">
-                  {resource.meta}
-                  <ExternalLink size={14} aria-hidden="true" />
+                  <span>{resource.meta}</span>
+                  <button
+                    className="resource-open"
+                    type="button"
+                    onClick={(event) => openResource(event, resource)}
+                    disabled={!resource.sourceUrl}
+                    aria-label={resource.sourceUrl ? `Open ${resource.title}` : `No source URL for ${resource.title}`}
+                    title={resource.sourceUrl ? `Open ${resource.title}` : "No source URL available"}
+                  >
+                    <ExternalLink size={14} aria-hidden="true" />
+                  </button>
                 </div>
-              </motion.button>
+              </motion.article>
             );
           })}
         </AnimatePresence>

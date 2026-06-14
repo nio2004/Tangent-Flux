@@ -1,10 +1,13 @@
 # Frontend dependencies and build output
+node_modules/
 Frontend/node_modules/
 Frontend/dist/
 Frontend/build/
 Frontend/.vite/
 
 # Backend local environment and generated files
+venv/
+.venv/
 Backend/.venv/
 Backend/*.db
 Backend/*.sqlite

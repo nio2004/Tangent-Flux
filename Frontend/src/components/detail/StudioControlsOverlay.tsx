@@ -24,6 +24,7 @@ export function StudioControlsOverlay({ open, ideaId, onClose, onAddTask, onWork
   const [logText, setLogText] = useState("");
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [messageTone, setMessageTone] = useState<"success" | "error">("success");
 
   if (!open) {
     return null;
@@ -32,11 +33,14 @@ export function StudioControlsOverlay({ open, ideaId, onClose, onAddTask, onWork
   async function runAction(action: () => Promise<void>, success: string) {
     setPending(true);
     setMessage(null);
+    setMessageTone("success");
     try {
       await action();
       await onWorkspaceChange();
+      setMessageTone("success");
       setMessage(success);
     } catch (error) {
+      setMessageTone("error");
       setMessage(error instanceof Error ? error.message : "Action failed.");
     } finally {
       setPending(false);
@@ -91,7 +95,7 @@ export function StudioControlsOverlay({ open, ideaId, onClose, onAddTask, onWork
               onClick={() =>
                 runAction(async () => {
                   if (!linkValue.trim()) {
-                    return;
+                    throw new Error("Paste a link or source text before attaching a resource.");
                   }
                   await addResource(ideaId, linkValue.trim(), linkTitle.trim() || undefined);
                   setLinkValue("");
@@ -180,7 +184,7 @@ export function StudioControlsOverlay({ open, ideaId, onClose, onAddTask, onWork
             </Button>
           </div>
         )}
-        {message && <p className="studio-status">{message}</p>}
+        {message && <p className={`studio-status studio-status-${messageTone}`}>{message}</p>}
       </div>
     </div>
   );

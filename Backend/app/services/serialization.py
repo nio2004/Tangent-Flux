@@ -19,7 +19,7 @@ def idea_out(db: Session, idea: Idea) -> IdeaOut:
         description=idea.description,
         tags=loads(idea.tags_json, []),
         progress=idea.progress,
-        resources=db.query(Resource).filter(Resource.idea_id == idea.id, Resource.type != "image").count(),
+        resources=db.query(Resource).filter(Resource.idea_id == idea.id, Resource.type.notin_(["image", "memory_update"])).count(),
         notes=len(idea.notes),
         updated=_friendly_updated(idea.updated_at),
         activity=idea.activity,
@@ -28,6 +28,7 @@ def idea_out(db: Session, idea: Idea) -> IdeaOut:
         texture=idea.texture,
         problem=idea.problem,
         memoryState=idea.memory_state,
+        coverUrl=idea.cover_url,
     )
 
 

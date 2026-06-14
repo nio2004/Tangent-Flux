@@ -22,7 +22,7 @@ def hydrate_workspace(db: Session, idea: Idea) -> WorkspaceOut:
     tasks = db.query(Task).filter(Task.idea_id == idea.id).all()
     resources = (
         db.query(Resource)
-        .filter(Resource.idea_id == idea.id, Resource.type != "image")
+        .filter(Resource.idea_id == idea.id, Resource.type.notin_(["image", "memory_update"]))
         .order_by(Resource.created_at.desc())
         .all()
     )
