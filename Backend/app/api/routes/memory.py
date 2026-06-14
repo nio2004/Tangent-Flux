@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.routes.ideas import _get_idea
@@ -14,7 +14,11 @@ router = APIRouter(prefix="/ideas", tags=["memory"])
 @router.post("/{idea_id}/resources", response_model=ResourceOut)
 def create_resource(idea_id: str, payload: ResourceCreate, db: Session = Depends(get_db)):
     idea = _get_idea(db, idea_id)
-    resource, _ = create_resource_and_chunks(db, idea, payload.input, payload.title, fail_soft=True)
+    try:
+        resource, _ = create_resource_and_chunks(db, idea, payload.input, payload.title)
+    except HTTPException:
+        db.rollback()
+        raise
     db.commit()
     db.refresh(resource)
     return resource_out(resource)

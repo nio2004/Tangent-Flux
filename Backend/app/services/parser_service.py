@@ -1,5 +1,6 @@
 import re
 from dataclasses import dataclass
+from html import unescape
 from urllib.parse import urlparse
 
 import requests
@@ -19,12 +20,27 @@ class ParsedResource:
 
 
 def is_url(value: str) -> bool:
-    parsed = urlparse(value.strip())
+    parsed = urlparse(normalize_url(value))
     return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
 
 
 def normalize_whitespace(value: str) -> str:
     return re.sub(r"\s+", " ", value).strip()
+
+
+def looks_like_bare_domain(value: str) -> bool:
+    candidate = value.strip()
+    return bool(
+        re.match(r"^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}([/:?#].*)?$", candidate, re.I)
+        and not re.search(r"\s", candidate)
+    )
+
+
+def normalize_url(value: str) -> str:
+    candidate = value.strip()
+    if looks_like_bare_domain(candidate):
+        return f"https://{candidate}"
+    return candidate
 
 
 def detect_source_type(value: str) -> str:
@@ -39,14 +55,15 @@ def detect_source_type(value: str) -> str:
 
 
 def parse_input(value: str, title: str | None = None) -> ParsedResource:
-    source_type = detect_source_type(value)
+    normalized_value = normalize_url(value)
+    source_type = detect_source_type(normalized_value)
     if source_type == "raw_text":
         return parse_raw_text(value, title)
     if source_type == "arxiv":
-        return parse_arxiv(value, title)
+        return parse_arxiv(normalized_value, title)
     if source_type == "reddit":
-        return parse_reddit(value, title)
-    return parse_webpage(value, title)
+        return parse_reddit(normalized_value, title)
+    return parse_webpage(normalized_value, title)
 
 
 def parse_raw_text(value: str, title: str | None = None) -> ParsedResource:
@@ -64,17 +81,30 @@ def parse_webpage(url: str, title: str | None = None) -> ParsedResource:
         raise ParseError(f"Could not fetch webpage: {exc}") from exc
 
     clean = None
+    parser = "html_text"
     try:
         import trafilatura
 
         clean = trafilatura.extract(response.text)
+        if clean:
+            parser = "trafilatura"
     except Exception:
         clean = None
-    clean = normalize_whitespace(clean or re.sub("<[^<]+?>", " ", response.text))
+
+    fallback_text = html_to_visible_text(response.text)
+    if len(fallback_text) > len(normalize_whitespace(clean or "")):
+        clean = fallback_text
+        parser = "html_text"
+    else:
+        clean = normalize_whitespace(clean or "")
+
     if len(clean) < 200:
-        raise ParseError("Parsed webpage content was too short to use.")
+        raise ParseError(
+            "The page was reachable, but it did not expose enough readable text to save as a resource. "
+            "Paste a longer excerpt or use a more specific article/document URL."
+        )
     page_title = title or _html_title(response.text) or urlparse(url).netloc
-    return ParsedResource("webpage", page_title, clean, url, {"parser": "trafilatura"})
+    return ParsedResource("webpage", page_title, clean, url, {"parser": parser})
 
 
 def parse_arxiv(url: str, title: str | None = None) -> ParsedResource:
@@ -90,7 +120,7 @@ def parse_arxiv(url: str, title: str | None = None) -> ParsedResource:
     abstract = re.sub("<[^<]+?>", " ", abstract_match.group(1)) if abstract_match else re.sub("<[^<]+?>", " ", html)
     clean = normalize_whitespace(f"{page_title}. {abstract}")
     if len(clean) < 100:
-        raise ParseError("Parsed arXiv abstract was too short to use.")
+        raise ParseError("The arXiv page did not expose enough abstract text to save as a resource.")
     return ParsedResource("arxiv", page_title, clean, url, {"parser": "arxiv"})
 
 
@@ -118,7 +148,7 @@ def parse_reddit(url: str, title: str | None = None) -> ParsedResource:
         pass
     clean = normalize_whitespace(" ".join(parts))
     if len(clean) < 100:
-        raise ParseError("Parsed Reddit content was too short to use.")
+        raise ParseError("The Reddit thread did not expose enough readable text to save as a resource.")
     return ParsedResource("reddit", post_title, clean, url, {"parser": "reddit_json"})
 
 
@@ -127,4 +157,12 @@ def _html_title(html: str) -> str | None:
     if not match:
         return None
     return normalize_whitespace(re.sub("<[^<]+?>", " ", match.group(1)))
+
+
+def html_to_visible_text(html: str) -> str:
+    stripped = re.sub(r"(?is)<(script|style|noscript|svg|canvas|template|head|footer)[^>]*>.*?</\1>", " ", html)
+    stripped = re.sub(r"(?is)<!--.*?-->", " ", stripped)
+    stripped = re.sub(r"(?is)<br\s*/?>|</p>|</div>|</li>|</h[1-6]>", " ", stripped)
+    stripped = re.sub(r"(?is)<[^>]+>", " ", stripped)
+    return normalize_whitespace(unescape(stripped))
 
