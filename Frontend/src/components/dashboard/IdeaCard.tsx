@@ -52,6 +52,7 @@ export function IdeaCard({ idea, index, onOpen }: IdeaCardProps) {
       aria-label={`Open ${idea.title} workspace`}
     >
       <div className="card-top">
+        {idea.coverUrl && <img className="card-cover-image" src={idea.coverUrl} alt="" aria-hidden="true" />}
         <span className="card-code">{idea.code}</span>
         <span className="progress-ring" aria-label={`${idea.progress}% complete`}>
           <span>{idea.progress}</span>

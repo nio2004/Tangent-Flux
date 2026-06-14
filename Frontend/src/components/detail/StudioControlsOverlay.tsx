@@ -24,6 +24,10 @@ export function StudioControlsOverlay({ open, ideaId, onClose, onAddTask, onWork
   const [logText, setLogText] = useState("");
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+<<<<<<< HEAD
+=======
+  const [messageTone, setMessageTone] = useState<"success" | "error">("success");
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 
   if (!open) {
     return null;
@@ -32,11 +36,22 @@ export function StudioControlsOverlay({ open, ideaId, onClose, onAddTask, onWork
   async function runAction(action: () => Promise<void>, success: string) {
     setPending(true);
     setMessage(null);
+<<<<<<< HEAD
     try {
       await action();
       await onWorkspaceChange();
       setMessage(success);
     } catch (error) {
+=======
+    setMessageTone("success");
+    try {
+      await action();
+      await onWorkspaceChange();
+      setMessageTone("success");
+      setMessage(success);
+    } catch (error) {
+      setMessageTone("error");
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
       setMessage(error instanceof Error ? error.message : "Action failed.");
     } finally {
       setPending(false);
@@ -91,12 +106,20 @@ export function StudioControlsOverlay({ open, ideaId, onClose, onAddTask, onWork
               onClick={() =>
                 runAction(async () => {
                   if (!linkValue.trim()) {
+<<<<<<< HEAD
                     return;
+=======
+                    throw new Error("Paste a link or source text before attaching a resource.");
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
                   }
                   await addResource(ideaId, linkValue.trim(), linkTitle.trim() || undefined);
                   setLinkValue("");
                   setLinkTitle("");
+<<<<<<< HEAD
+                }, "Resource attached.")
+=======
                 }, "Linked evidence attached.")
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
               }
             >
               <Link size={17} aria-hidden="true" />
@@ -109,7 +132,15 @@ export function StudioControlsOverlay({ open, ideaId, onClose, onAddTask, onWork
           <div className="studio-form">
             <label className="field">
               <span>Upload image or diagram</span>
+<<<<<<< HEAD
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(event) => setDiagramFile(event.target.files?.[0] ?? null)}
+              />
+=======
               <input type="file" accept="image/*" onChange={(event) => setDiagramFile(event.target.files?.[0] ?? null)} />
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
             </label>
             {diagramFile && <p className="studio-status">Ready: {diagramFile.name}</p>}
             <Button
@@ -160,7 +191,15 @@ export function StudioControlsOverlay({ open, ideaId, onClose, onAddTask, onWork
           <div className="studio-form">
             <label className="add-task-control">
               <span>Add task</span>
+<<<<<<< HEAD
+              <input
+                value={taskTitle}
+                onChange={(event) => setTaskTitle(event.target.value)}
+                placeholder="Name the next build step"
+              />
+=======
               <input value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} placeholder="Name the next build step" />
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
             </label>
             <Button
               variant="hot"
@@ -180,7 +219,11 @@ export function StudioControlsOverlay({ open, ideaId, onClose, onAddTask, onWork
             </Button>
           </div>
         )}
+<<<<<<< HEAD
         {message && <p className="studio-status">{message}</p>}
+=======
+        {message && <p className={`studio-status studio-status-${messageTone}`}>{message}</p>}
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
       </div>
     </div>
   );

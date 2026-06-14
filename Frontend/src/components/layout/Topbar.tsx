@@ -11,8 +11,13 @@ interface TopbarProps {
 }
 
 const tabs = [
+<<<<<<< HEAD
+  { label: "Board", view: "board" as const, icon: Columns3 },
+  { label: "Graph", view: "graph" as const, icon: Share2 },
+=======
   { label: "Board", icon: Columns3, view: "board" as const },
   { label: "Graph", icon: Share2, view: "graph" as const },
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 ];
 
 export function Topbar({ query, onQueryChange, onQuickAdd, activeView, onViewChange }: TopbarProps) {
@@ -24,7 +29,11 @@ export function Topbar({ query, onQueryChange, onQuickAdd, activeView, onViewCha
           <span>Tangent-Flux</span>
         </a>
         <nav className="feed-tabs" aria-label="Workspace views">
+<<<<<<< HEAD
+          {tabs.map(({ label, view, icon: Icon }) => (
+=======
           {tabs.map(({ label, icon: Icon, view }) => (
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
             <button
               className={activeView === view ? "feed-tab is-active" : "feed-tab"}
               type="button"

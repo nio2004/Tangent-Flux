@@ -55,6 +55,8 @@ export function QuickAddDialog({ open, onClose, onCreate }: QuickAddDialogProps)
       problem: source.trim()
         ? `Initial source captured from ${source.trim()}.`
         : "This idea needs a problem statement, source stack, and first build task.",
+      initialSource: source.trim() || undefined,
+      quickNote: note.trim() || undefined,
     });
     reset();
     onClose();

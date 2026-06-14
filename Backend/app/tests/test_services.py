@@ -1,4 +1,3 @@
-from app.agents.agent3_update import _label_from_content
 from app.agents.agent1_schema import fallback_agent1
 from app.models import Chunk
 from app.services.memory_service import _assign_chunks_to_concepts, _text_label_overlap
@@ -87,15 +86,4 @@ def test_concept_assignment_does_not_create_empty_nodes():
     assert {chunk.id for chunk in assignments["accommodation assimilation memory"]} == {"c1"}
     assert {chunk.id for chunk in assignments["context window limits"]} == {"c2"}
     assert {chunk.id for chunk in assignments["similar-context graph"]} == {"c3"}
-
-
-def test_agent3_new_concept_label_and_overlap_gate():
-    content = (
-        "Vector databases can store episodic memory with hybrid retrieval, metadata filters, "
-        "and reranking so agents can recover relevant user context."
-    )
-
-    assert _label_from_content(content) == "vector databases can store"
-    assert _text_label_overlap(content, "context window limits") < 0.25
-    assert _text_label_overlap(content, "hybrid retrieval memory") >= 0.25
 

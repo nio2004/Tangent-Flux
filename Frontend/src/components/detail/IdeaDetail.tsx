@@ -1,5 +1,9 @@
+<<<<<<< HEAD
+import { ChevronLeft, GitBranch, Image, Sparkles, X } from "lucide-react";
+=======
 import { ChevronLeft, ChevronRight, GitBranch, Image, PanelLeftClose, PanelLeftOpen, Sparkles, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 import { useEffect, useState } from "react";
 import type {
   GallerySlide,
@@ -17,6 +21,10 @@ import { Badge } from "../ui/badge.tsx";
 import { Button } from "../ui/button.tsx";
 import { CoverDropzone } from "./CoverDropzone.tsx";
 import { KanbanWorkspace } from "./KanbanWorkspace.tsx";
+<<<<<<< HEAD
+=======
+import { IdeaAgentOverlay } from "./IdeaAgentOverlay.tsx";
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 import { MarkdownNotes } from "./MarkdownNotes.tsx";
 import { ResourceCarousel } from "./ResourceCarousel.tsx";
 import { StudioControlsOverlay } from "./StudioControlsOverlay.tsx";
@@ -36,30 +44,50 @@ interface IdeaDetailProps {
   loading: boolean;
   error: string | null;
   onClose: () => void;
+<<<<<<< HEAD
+  onNotesSave: (notes: string) => void;
+  onCoverChange: (cover: string) => void;
+  onMoveTask: (taskId: string, lane: KanbanLaneId) => void;
+  onAddTask: (task: KanbanTask) => void;
+=======
   onNotesSave: (notes: string) => Promise<void> | void;
   onCoverChange: (cover: string) => void;
   onMoveTask: (taskId: string, lane: KanbanLaneId) => void;
   onAddTask: (task: KanbanTask) => Promise<void> | void;
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
   onWorkspaceChange: () => Promise<void>;
   onInitializeMemory: () => Promise<void>;
 }
 
 function GalleryPanel({ slides }: { slides: GallerySlide[] }) {
   const [index, setIndex] = useState(0);
+<<<<<<< HEAD
+  useEffect(() => {
+    setIndex(0);
+  }, [slides]);
+
+  const fallback: GallerySlide = {
+    title: "No diagrams yet",
+    caption: "Create a diagram or artifact from Studio Controls.",
+=======
   useEffect(() => setIndex(0), [slides]);
   const fallback: GallerySlide = {
     title: "No diagrams yet",
     caption: "Upload an image from Studio Controls to ingest it with vision.",
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
     art: "mesh",
   };
   const safeIndex = slides.length ? Math.min(index, slides.length - 1) : 0;
   const slide = slides[safeIndex] ?? fallback;
+<<<<<<< HEAD
+=======
   const total = Math.max(slides.length, 1);
   const position = `${String(safeIndex + 1).padStart(2, "0")} / ${String(total).padStart(2, "0")}`;
 
   function move(direction: number) {
     setIndex((current) => (current + direction + total) % total);
   }
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 
   return (
     <section className="workspace-panel gallery-stage" id="gallery">
@@ -68,6 +96,30 @@ function GalleryPanel({ slides }: { slides: GallerySlide[] }) {
           <p className="eyebrow">Architecture Gallery</p>
           <h3>{slide.title}</h3>
         </div>
+<<<<<<< HEAD
+        <div className="resource-controls">
+          {slides.map((item, itemIndex) => (
+            <button
+              key={item.title}
+              type="button"
+              className={itemIndex === safeIndex ? "is-active" : ""}
+              onClick={() => setIndex(itemIndex)}
+              aria-label={`Show ${item.title}`}
+            />
+          ))}
+        </div>
+      </div>
+      <div className={`gallery-art gallery-${slide.art}`}>
+        {slide.assetUrl ? (
+          <img src={slide.assetUrl} alt={slide.title} />
+        ) : (
+          <>
+            <Image size={28} aria-hidden="true" />
+            <span>{slide.title}</span>
+          </>
+        )}
+      </div>
+=======
         <div className="gallery-toggle" aria-label="Architecture image selector">
           <Button variant="ghost" size="icon" onClick={() => move(-1)} aria-label="Previous architecture view">
             <ChevronLeft size={18} aria-hidden="true" />
@@ -97,6 +149,7 @@ function GalleryPanel({ slides }: { slides: GallerySlide[] }) {
           )}
         </motion.div>
       </AnimatePresence>
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
       <p className="gallery-caption">{slide.caption}</p>
     </section>
   );
@@ -142,6 +195,10 @@ function LocalMemoryPanel({
               <span>{edges.length} edges</span>
             </div>
           </div>
+<<<<<<< HEAD
+
+=======
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
           <div className="local-graph" aria-label="Local idea graph visualization">
             {edges.map((edge: GraphEdge) => {
               const sourceIndex = nodes.findIndex((node) => node.id === edge.source);
@@ -157,6 +214,11 @@ function LocalMemoryPanel({
               const targetY = 50 + Math.sin(targetAngle) * 30;
               const dx = targetX - sourceX;
               const dy = targetY - sourceY;
+<<<<<<< HEAD
+              const length = Math.hypot(dx, dy);
+              const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+=======
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 
               return (
                 <span
@@ -166,18 +228,38 @@ function LocalMemoryPanel({
                   style={{
                     left: `${sourceX}%`,
                     top: `${sourceY}%`,
+<<<<<<< HEAD
+                    width: `${length}%`,
+                    transform: `rotate(${angle}deg)`,
+=======
                     width: `${Math.hypot(dx, dy)}%`,
                     transform: `rotate(${Math.atan2(dy, dx) * (180 / Math.PI)}deg)`,
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
                   }}
                 />
               );
             })}
+<<<<<<< HEAD
+
+=======
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
             {nodes.map((node: GraphNode, index: number) => {
               const angle = (index / Math.max(nodes.length, 1)) * Math.PI * 2;
               const left = nodes.length === 1 ? 50 : 50 + Math.cos(angle) * 32;
               const top = nodes.length === 1 ? 50 : 50 + Math.sin(angle) * 30;
+<<<<<<< HEAD
+
+              return (
+                <div
+                  key={node.id}
+                  className="local-node"
+                  title={node.summary}
+                  style={{ left: `${left}%`, top: `${top}%` }}
+                >
+=======
               return (
                 <div key={node.id} className="local-node" title={node.summary} style={{ left: `${left}%`, top: `${top}%` }}>
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
                   <strong>{node.label}</strong>
                   <span>{node.memberCount} chunks</span>
                 </div>
@@ -218,6 +300,18 @@ export function IdeaDetail({
 }: IdeaDetailProps) {
   const [kanbanExpanded, setKanbanExpanded] = useState(false);
   const [studioOpen, setStudioOpen] = useState(false);
+<<<<<<< HEAD
+
+  return (
+    <>
+      <section className={open ? "detail-view is-open" : "detail-view"} aria-hidden={!open}>
+        <div className="detail-shell">
+          <aside className="detail-side">
+            <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close idea workspace">
+              <X size={18} aria-hidden="true" />
+            </Button>
+=======
+  const [agentOpen, setAgentOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
@@ -249,6 +343,7 @@ export function IdeaDetail({
                 {sidebarCollapsed ? <PanelLeftOpen size={18} aria-hidden="true" /> : <PanelLeftClose size={18} aria-hidden="true" />}
               </Button>
             </div>
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 
             <div className="momentum-card">
               <p className="eyebrow">Momentum</p>
@@ -258,7 +353,11 @@ export function IdeaDetail({
             </div>
 
             <nav className="detail-nav" aria-label="Idea workspace sections">
+<<<<<<< HEAD
+              {["Overview", "Memory", "Notes", "Tasks", "Resources", "Gallery", "Timeline"].map((item) => (
+=======
               {["Overview", "Notes", "Memory", "Tasks", "Resources", "Gallery", "Timeline"].map((item) => (
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
                 <a href={`#${item.toLowerCase()}`} key={item}>
                   <ChevronLeft size={14} aria-hidden="true" />
                   {item}
@@ -270,15 +369,34 @@ export function IdeaDetail({
               <Sparkles size={17} aria-hidden="true" />
               <span>Studio Controls</span>
             </Button>
+<<<<<<< HEAD
+=======
+            <Button variant="ghost" onClick={() => setAgentOpen(true)}>
+              <GitBranch size={17} aria-hidden="true" />
+              <span>Idea Agent</span>
+            </Button>
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
           </aside>
 
           <main className="detail-main">
             {(loading || error) && (
+<<<<<<< HEAD
+              <section className="workspace-panel">
+=======
               <section className="workspace-panel workspace-status">
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
                 <p className="eyebrow">{loading ? "Syncing" : "Backend issue"}</p>
                 <p>{loading ? "Loading workspace data..." : error}</p>
               </section>
             )}
+<<<<<<< HEAD
+            <section className="detail-hero" id="overview">
+              <div className="detail-hero-copy">
+                <p className="eyebrow">Focused workspace</p>
+                <div className="detail-title-row">
+                  <h1>{idea.title}</h1>
+                  <Badge tone="accent">{idea.status}</Badge>
+=======
             <section className={cover ? "detail-hero has-cover" : "detail-hero"} id="overview">
               <CoverDropzone cover={cover} onCoverChange={onCoverChange} />
               <div className="detail-hero-copy">
@@ -288,6 +406,7 @@ export function IdeaDetail({
                 </p>
                 <div className="detail-title-row">
                   <h1>{idea.title}</h1>
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
                 </div>
                 <p>{idea.description}</p>
                 <div className="tag-row">
@@ -298,6 +417,24 @@ export function IdeaDetail({
                   ))}
                 </div>
               </div>
+<<<<<<< HEAD
+              <CoverDropzone cover={cover} onCoverChange={onCoverChange} />
+            </section>
+
+            <div className="studio-grid">
+              <section className="workspace-panel problem-card">
+                <p className="eyebrow">Problem Statement</p>
+                <h3>What this needs to solve</h3>
+                <p>{idea.problem}</p>
+                <div className="review-strip">
+                  <span>Sources attached</span>
+                  <span>Assumptions visible</span>
+                  <span>Approval pending</span>
+                </div>
+              </section>
+
+              <MarkdownNotes value={notes} onSave={onNotesSave} />
+=======
             </section>
 
             <div className="detail-sections">
@@ -320,6 +457,7 @@ export function IdeaDetail({
                 </div>
               </section>
 
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
               <LocalMemoryPanel
                 memory={memory}
                 graph={graph}
@@ -327,6 +465,21 @@ export function IdeaDetail({
                 loading={loading}
                 onInitializeMemory={onInitializeMemory}
               />
+<<<<<<< HEAD
+              <ResourceCarousel resources={resources} />
+              <KanbanWorkspace
+                board={board}
+                expanded={kanbanExpanded}
+                onExpandedChange={setKanbanExpanded}
+                onMoveTask={onMoveTask}
+              />
+              <GalleryPanel slides={gallery} />
+              <TimelineWindow entries={timeline} />
+            </div>
+          </main>
+        </div>
+      </section>
+=======
 
               <section className="detail-section task-context-layout" aria-label="Task and context mesh">
                 <KanbanWorkspace
@@ -343,6 +496,7 @@ export function IdeaDetail({
           </main>
         </motion.div>
       </motion.section>
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 
       <StudioControlsOverlay
         open={studioOpen}
@@ -351,6 +505,10 @@ export function IdeaDetail({
         onAddTask={onAddTask}
         onWorkspaceChange={onWorkspaceChange}
       />
+<<<<<<< HEAD
+=======
+      <IdeaAgentOverlay open={agentOpen} idea={idea} onClose={() => setAgentOpen(false)} />
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
     </>
   );
 }

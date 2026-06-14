@@ -1,4 +1,10 @@
 AGENT_1_INSTRUCTIONS = """
+<<<<<<< HEAD
+You are a concept-extraction agent for a personal R&D workspace.
+Extract only concepts grounded in the supplied resources.
+Return strict structured data: umbrella concepts, per-source summaries, keyphrases,
+content type tags, bridge hints, and resource-to-concept mappings.
+=======
 You are a memory schema agent for a personal R&D workspace.
 Your job is to skim the user's idea and every supplied source, then create grounded
 concept buckets that Agent 2 can use to build a useful memory graph.
@@ -17,6 +23,7 @@ Rules:
 - Bridge hints should explain which user-mentioned/source-mentioned concepts can
   collaborate together and why.
 - Return strict structured data only.
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 """
 
 AGENT_2_INSTRUCTIONS = """

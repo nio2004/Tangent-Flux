@@ -1,6 +1,11 @@
+<<<<<<< HEAD
+import { Maximize2 } from "lucide-react";
+import type { KanbanBoard, KanbanLaneId } from "../../types/idea.ts";
+=======
 import { Maximize2, X } from "lucide-react";
 import { CSSProperties, DragEvent, useState } from "react";
 import type { KanbanBoard, KanbanLaneId, KanbanTask } from "../../types/idea.ts";
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 import { Button } from "../ui/button.tsx";
 
 interface KanbanWorkspaceProps {
@@ -19,6 +24,12 @@ const laneLabels: Record<KanbanLaneId, string> = {
 const laneIds: KanbanLaneId[] = ["todo", "progress", "completed"];
 
 export function KanbanWorkspace({ board, expanded, onExpandedChange, onMoveTask }: KanbanWorkspaceProps) {
+<<<<<<< HEAD
+  const boardView = (
+    <div className="kanban" aria-label="Build task board">
+      {laneIds.map((laneId) => (
+        <section className="lane" key={laneId}>
+=======
   const [draggingTask, setDraggingTask] = useState<string | null>(null);
 
   function handleDrop(event: DragEvent<HTMLElement>, laneId: KanbanLaneId) {
@@ -81,11 +92,34 @@ export function KanbanWorkspace({ board, expanded, onExpandedChange, onMoveTask 
           onDragOver={(event) => event.preventDefault()}
           onDrop={(event) => handleDrop(event, laneId)}
         >
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
           <div className="lane-heading">
             <h4>{laneLabels[laneId]}</h4>
             <span>{board[laneId].length}</span>
           </div>
           <div className="task-stack">
+<<<<<<< HEAD
+            {board[laneId].map((task) => (
+              <article className="task-card" key={task.id}>
+                <strong>{task.title}</strong>
+                <small>{task.points} pts</small>
+                {expanded && (
+                  <div className="task-move-row">
+                    {laneIds.map((targetLane) => (
+                      <button
+                        key={targetLane}
+                        type="button"
+                        onClick={() => onMoveTask(task.id, targetLane)}
+                        disabled={targetLane === laneId}
+                      >
+                        {laneLabels[targetLane]}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </article>
+            ))}
+=======
             {board[laneId].slice(0, 4).map((task, index) => (
               <div
                 className={index === 0 ? "task-stack-layer active" : "task-stack-layer"}
@@ -118,6 +152,7 @@ export function KanbanWorkspace({ board, expanded, onExpandedChange, onMoveTask 
           <div className="expanded-task-list">
             {board[laneId].map((task) => renderTaskCard(task, laneId))}
             {board[laneId].length === 0 ? <p className="empty-lane">Drop tasks here</p> : null}
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
           </div>
         </section>
       ))}
@@ -137,11 +172,27 @@ export function KanbanWorkspace({ board, expanded, onExpandedChange, onMoveTask 
             <span>Expand</span>
           </Button>
         </div>
+<<<<<<< HEAD
+        <button
+          className="kanban-preview-button"
+          type="button"
+          onClick={() => onExpandedChange(true)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              onExpandedChange(true);
+            }
+          }}
+          aria-label="Open expanded Kanban board"
+        >
+          {boardView}
+=======
         <div className="kanban-preview-frame">
           {previewBoard}
         </div>
         <button className="kanban-expand-button" type="button" onClick={() => onExpandedChange(true)}>
           Open board
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
         </button>
       </section>
 
@@ -153,11 +204,19 @@ export function KanbanWorkspace({ board, expanded, onExpandedChange, onMoveTask 
                 <p className="eyebrow">Expanded Board</p>
                 <h2>Move work through review</h2>
               </div>
+<<<<<<< HEAD
+              <Button variant="ghost" onClick={() => onExpandedChange(false)}>
+                Close
+              </Button>
+            </div>
+            {boardView}
+=======
               <Button variant="ghost" size="icon" onClick={() => onExpandedChange(false)} aria-label="Close Kanban board">
                 <X size={18} aria-hidden="true" />
               </Button>
             </div>
             {expandedBoard}
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
           </div>
         </div>
       )}

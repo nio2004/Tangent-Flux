@@ -8,9 +8,17 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     openai_agent_model: str = "gpt-5-nano"
     openai_vision_model: str = "gpt-4.1-mini"
+<<<<<<< HEAD
     openai_embedding_model: str = "text-embedding-3-small"
     frontend_origin: str = "http://localhost:5173"
     use_openai_agents: bool = True
+=======
+    openai_web_search_model: str = "gpt-4.1-mini"
+    openai_embedding_model: str = "text-embedding-3-small"
+    frontend_origin: str = "http://localhost:5173"
+    use_openai_agents: bool = True
+    openai_enable_web_search: bool = True
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

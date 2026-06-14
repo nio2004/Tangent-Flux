@@ -5,9 +5,16 @@ import { IdeaGrid } from "./components/dashboard/IdeaGrid.tsx";
 import { IdeaDetail } from "./components/detail/IdeaDetail.tsx";
 import { Topbar } from "./components/layout/Topbar.tsx";
 import { QuickAddDialog } from "./components/quick-add/QuickAddDialog.tsx";
-import { gallery as sampleGallery, ideas as initialIdeas, initialKanban, resources as sampleResources, starterNotes, timeline as sampleTimeline } from "./data/ideas.ts";
-import { createIdea as createIdeaApi, fetchGraphOverview, fetchIdeas, fetchWorkspace, initializeMemory, saveIdeaNote } from "./api/ideas.ts";
+<<<<<<< HEAD
+import { ideas as initialIdeas, initialKanban, starterNotes } from "./data/ideas.ts";
+import { createIdea as createIdeaApi, fetchGraphOverview, fetchIdeas, fetchWorkspace, initializeMemory } from "./api/ideas.ts";
 import { addTask as addTaskApi, moveTask as moveTaskApi } from "./api/workspace.ts";
+import { moveTask } from "./lib/kanban.ts";
+import type { GallerySlide, GraphEdge, GraphNode, Idea, IdeaMemory, KanbanLaneId, KanbanTask, OverviewGraph, ResourcePreview, TimelineEntry } from "./types/idea.ts";
+=======
+import { gallery as sampleGallery, ideas as initialIdeas, initialKanban, resources as sampleResources, starterNotes, timeline as sampleTimeline } from "./data/ideas.ts";
+import { createIdea as createIdeaApi, fetchGraphOverview, fetchIdeas, fetchWorkspace, initializeMemory } from "./api/ideas.ts";
+import { addTask as addTaskApi, moveTask as moveTaskApi, saveCoverImage, saveIdeaNotes } from "./api/workspace.ts";
 import { moveTask } from "./lib/kanban.ts";
 import type {
   GallerySlide,
@@ -21,6 +28,7 @@ import type {
   ResourcePreview,
   TimelineEntry,
 } from "./types/idea.ts";
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 
 function App() {
   const [ideas, setIdeas] = useState(initialIdeas);
@@ -34,9 +42,15 @@ function App() {
   const [notes, setNotes] = useState(starterNotes);
   const [cover, setCover] = useState<string | null>(null);
   const [board, setBoard] = useState(initialKanban);
+<<<<<<< HEAD
+  const [resources, setResources] = useState<ResourcePreview[]>([]);
+  const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
+  const [gallery, setGallery] = useState<GallerySlide[]>([]);
+=======
   const [resources, setResources] = useState<ResourcePreview[]>(sampleResources);
   const [timeline, setTimeline] = useState<TimelineEntry[]>(sampleTimeline);
   const [gallery, setGallery] = useState<GallerySlide[]>(sampleGallery);
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
   const [localMemory, setLocalMemory] = useState<IdeaMemory | null>(null);
   const [localGraph, setLocalGraph] = useState<{ nodes: GraphNode[]; edges: GraphEdge[] }>({ nodes: [], edges: [] });
   const [workspaceLoading, setWorkspaceLoading] = useState(false);
@@ -96,6 +110,31 @@ function App() {
     window.setTimeout(() => setSelectedIdea(null), 260);
   }
 
+<<<<<<< HEAD
+  async function loadWorkspace(ideaId: string) {
+    setWorkspaceLoading(true);
+    setWorkspaceError(null);
+    try {
+      const workspace = await fetchWorkspace(ideaId);
+      setSelectedIdea(workspace.idea);
+      setNotes(workspace.notes[0]?.markdown ?? starterNotes);
+      setCover(workspace.coverUrl);
+      setBoard(workspace.tasks);
+      setResources(workspace.resources);
+      setTimeline(workspace.timeline);
+      setGallery(workspace.artifacts);
+      setLocalMemory(workspace.memory);
+      setLocalGraph(workspace.graph);
+      setIdeas((currentIdeas) => currentIdeas.map((idea) => (idea.id === workspace.idea.id ? workspace.idea : idea)));
+    } catch (error) {
+      setWorkspaceError(error instanceof Error ? error.message : "Workspace failed to load.");
+    } finally {
+      setWorkspaceLoading(false);
+    }
+  }
+
+=======
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
   async function createIdea(idea: Idea) {
     try {
       const created = await createIdeaApi({
@@ -114,6 +153,8 @@ function App() {
     setQuery("");
   }
 
+<<<<<<< HEAD
+=======
   async function loadWorkspace(ideaId: string) {
     setWorkspaceLoading(true);
     setWorkspaceError(null);
@@ -139,6 +180,7 @@ function App() {
     }
   }
 
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
   async function refreshSelectedWorkspace() {
     if (selectedIdea) {
       await loadWorkspace(selectedIdea.id);
@@ -163,7 +205,14 @@ function App() {
     }
     try {
       const created = await addTaskApi(selectedIdea.id, task.title, task.points);
+<<<<<<< HEAD
+      setBoard((current) => ({
+        ...current,
+        todo: [created, ...current.todo],
+      }));
+=======
       setBoard((current) => ({ ...current, todo: [created, ...current.todo] }));
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
       await refreshSelectedWorkspace();
     } catch (error) {
       setWorkspaceError(error instanceof Error ? error.message : "Task could not be saved.");
@@ -199,6 +248,8 @@ function App() {
     }
   }
 
+<<<<<<< HEAD
+=======
   async function handleNotesSave(markdown: string) {
     if (!selectedIdea) {
       setNotes(markdown);
@@ -207,13 +258,32 @@ function App() {
     setWorkspaceError(null);
     setNotes(markdown);
     try {
-      await saveIdeaNote(selectedIdea.id, markdown);
+      await saveIdeaNotes(selectedIdea.id, markdown);
       await refreshSelectedWorkspace();
     } catch (error) {
       setWorkspaceError(error instanceof Error ? error.message : "Idea dump could not be saved.");
     }
   }
 
+  async function handleCoverChange(nextCover: string) {
+    setCover(nextCover);
+    if (!selectedIdea) {
+      return;
+    }
+
+    setWorkspaceError(null);
+    try {
+      const saved = await saveCoverImage(selectedIdea.id, nextCover);
+      setCover(saved.coverUrl);
+      setIdeas((currentIdeas) =>
+        currentIdeas.map((idea) => (idea.id === selectedIdea.id ? { ...idea, coverUrl: saved.coverUrl } : idea)),
+      );
+    } catch (error) {
+      setWorkspaceError(error instanceof Error ? error.message : "Cover image could not be saved.");
+    }
+  }
+
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
   return (
     <div className="app-shell">
       <Topbar
@@ -272,8 +342,13 @@ function App() {
           loading={workspaceLoading}
           error={workspaceError}
           onClose={closeDetail}
-          onNotesSave={handleNotesSave}
+<<<<<<< HEAD
+          onNotesSave={setNotes}
           onCoverChange={setCover}
+=======
+          onNotesSave={handleNotesSave}
+          onCoverChange={handleCoverChange}
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
           onMoveTask={handleMoveTask}
           onAddTask={handleAddTask}
           onWorkspaceChange={refreshSelectedWorkspace}

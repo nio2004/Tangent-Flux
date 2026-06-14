@@ -6,12 +6,26 @@ from app.agents.sdk import run_structured_agent
 from app.schemas.agent import Agent1Output, BridgeHint
 
 STOPWORDS = {
+<<<<<<< HEAD
+=======
     "abstract",
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
     "about",
     "after",
     "also",
     "and",
     "are",
+<<<<<<< HEAD
+    "because",
+    "between",
+    "from",
+    "have",
+    "into",
+    "that",
+    "the",
+    "this",
+    "with",
+=======
     "back",
     "because",
     "between",
@@ -50,10 +64,13 @@ STOPWORDS = {
     "want",
     "with",
     "working",
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
     "would",
     "your",
 }
 
+<<<<<<< HEAD
+=======
 GENERIC_CONCEPTS = {
     "agent",
     "agents",
@@ -90,10 +107,36 @@ METADATA_WORDS = {
     "submit",
 }
 
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 
 async def run_agent1(intent: str, sources: dict[str, str]) -> Agent1Output:
     prompt = f"Intent: {intent}\nSources:\n{sources}"
     output = await run_structured_agent("Memory Schema Agent", AGENT_1_INSTRUCTIONS, prompt, Agent1Output)
+<<<<<<< HEAD
+    if output:
+        return output
+    return fallback_agent1(sources)
+
+
+def fallback_agent1(sources: dict[str, str]) -> Agent1Output:
+    all_text = " ".join(sources.values()).lower()
+    words = [
+        word
+        for word in re.findall(r"[a-zA-Z][a-zA-Z\-]{2,}", all_text)
+        if word not in STOPWORDS and len(word) > 3
+    ]
+    counts = Counter(words)
+    top = [word for word, _ in counts.most_common(8)]
+    concepts = _concepts_from_terms(top)
+    if len(concepts) < 2:
+        concepts = ["idea direction", "build context"]
+    summaries = {source_id: _summary(text) for source_id, text in sources.items()}
+    keyphrases = {source_id: _keyphrases(text) for source_id, text in sources.items()}
+    resource_map = {source_id: concepts[: min(2, len(concepts))] for source_id in sources}
+    bridge_hints = []
+    if len(concepts) >= 2:
+        bridge_hints.append(BridgeHint(concept_a=concepts[0], concept_b=concepts[1], reason="Top concepts co-occur in the initial dump."))
+=======
     if output and _is_high_quality_output(output):
         return output
     return fallback_agent1(sources, intent)
@@ -117,6 +160,7 @@ def fallback_agent1(sources: dict[str, str], intent: str = "") -> Agent1Output:
                 reason="These grounded concepts co-occur across the idea/source material and can inform the same memory graph.",
             )
         )
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
     return Agent1Output(
         umbrella_concepts=concepts[:6],
         per_source_summary=summaries,
@@ -127,6 +171,16 @@ def fallback_agent1(sources: dict[str, str], intent: str = "") -> Agent1Output:
     )
 
 
+<<<<<<< HEAD
+def _summary(text: str) -> str:
+    sentences = re.split(r"(?<=[.!?])\s+", text.strip())
+    return (sentences[0] if sentences else text[:180])[:240]
+
+
+def _keyphrases(text: str) -> list[str]:
+    words = [word.lower() for word in re.findall(r"[a-zA-Z][a-zA-Z\-]{3,}", text) if word.lower() not in STOPWORDS]
+    return [word for word, _ in Counter(words).most_common(6)]
+=======
 def _is_high_quality_output(output: Agent1Output) -> bool:
     concepts = [_normalize_phrase(concept) for concept in output.umbrella_concepts]
     if len(set(concepts)) < len(concepts):
@@ -146,11 +200,18 @@ def _summary(text: str) -> str:
 
 def _keyphrases(text: str) -> list[str]:
     return _rank_phrases(text)[:6]
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 
 
 def _concepts_from_terms(terms: list[str]) -> list[str]:
     concepts = []
     for term in terms:
+<<<<<<< HEAD
+        if term not in concepts:
+            concepts.append(term)
+    return concepts[:6]
+
+=======
         normalized = _normalize_phrase(term)
         if normalized and normalized not in concepts and not _is_vague_concept(normalized):
             concepts.append(normalized)
@@ -281,3 +342,4 @@ def _looks_like_page_chrome(text: str) -> bool:
     ]
     return any(term in lowered for term in chrome_terms)
 
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
