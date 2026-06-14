@@ -1,33 +1,22 @@
-# Dependencies
-node_modules/
+# Frontend dependencies and build output
+Frontend/node_modules/
+Frontend/dist/
+Frontend/build/
+Frontend/.vite/
 
-# Build output
-dist/
-build/
-.vite/
+# Backend local environment and generated files
+Backend/.venv/
+Backend/*.db
+Backend/*.sqlite
+Backend/.env
+__pycache__/
+*.py[cod]
 
-# Logs
+# Logs and caches
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# Local environment
-.env
-.env.*
-!.env.example
-
-# Test and browser artifacts
-coverage/
-.playwright-mcp/
-playwright-report/
-test-results/
-
-# TypeScript and tool caches
 *.tsbuildinfo
-.eslintcache
-.stylelintcache
+.pytest_cache/
+coverage/
 
 # OS and editor files
 .DS_Store
@@ -35,8 +24,3 @@ Thumbs.db
 Desktop.ini
 .vscode/
 .idea/
-
-# Temporary files
-tmp/
-temp/
-*.tmp
