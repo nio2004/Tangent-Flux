@@ -2,8 +2,8 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
-from app.models import AgentRun, Artifact, GraphEdge, GraphNode, Idea, IdeaMemory, Resource, Task, TimelineEntry
-from app.schemas.graph import GraphEdgeOut, GraphNodeOut, GraphOut
+from app.models import AgentRun, Artifact, Chunk, GraphEdge, GraphNode, Idea, IdeaMemory, Resource, Task, TimelineEntry
+from app.schemas.graph import GraphEdgeOut, GraphEvidenceOut, GraphNodeOut, GraphOut
 from app.schemas.idea import IdeaOut
 from app.schemas.memory import MemoryOut, ResourceOut
 from app.schemas.task import KanbanBoardOut, TaskOut
@@ -32,7 +32,8 @@ def idea_out(db: Session, idea: Idea) -> IdeaOut:
     )
 
 
-def graph_out(nodes: list[GraphNode], edges: list[GraphEdge]) -> GraphOut:
+def graph_out(nodes: list[GraphNode], edges: list[GraphEdge], db: Session | None = None) -> GraphOut:
+    evidence_by_chunk = _evidence_by_chunk(db, nodes) if db else {}
     return GraphOut(
         nodes=[
             GraphNodeOut(
@@ -41,6 +42,11 @@ def graph_out(nodes: list[GraphNode], edges: list[GraphEdge]) -> GraphOut:
                 summary=node.summary,
                 memberCount=node.member_count,
                 sourceIds=loads(node.source_chunk_ids_json, []),
+                evidence=[
+                    evidence_by_chunk[chunk_id]
+                    for chunk_id in loads(node.source_chunk_ids_json, [])[:8]
+                    if chunk_id in evidence_by_chunk
+                ],
                 createdBy=node.created_by,
             )
             for node in nodes
@@ -58,6 +64,38 @@ def graph_out(nodes: list[GraphNode], edges: list[GraphEdge]) -> GraphOut:
             for edge in edges
         ],
     )
+
+
+def _evidence_by_chunk(db: Session | None, nodes: list[GraphNode]) -> dict[str, GraphEvidenceOut]:
+    if not db:
+        return {}
+    chunk_ids = {
+        chunk_id
+        for node in nodes
+        for chunk_id in loads(node.source_chunk_ids_json, [])
+    }
+    if not chunk_ids:
+        return {}
+    chunks = db.query(Chunk).filter(Chunk.id.in_(chunk_ids)).all()
+    resources = {
+        resource.id: resource
+        for resource in db.query(Resource).filter(Resource.id.in_({chunk.resource_id for chunk in chunks})).all()
+    }
+    result = {}
+    for chunk in chunks:
+        resource = resources.get(chunk.resource_id)
+        if not resource:
+            continue
+        result[chunk.id] = GraphEvidenceOut(
+            chunkId=chunk.id,
+            resourceId=resource.id,
+            resourceTitle=resource.title,
+            resourceType=resource.type,
+            sourceUrl=resource.source_url,
+            position=chunk.position,
+            preview=chunk.text[:220],
+        )
+    return result
 
 
 def _shared_evidence_count(nodes: list[GraphNode], edge: GraphEdge) -> int:
