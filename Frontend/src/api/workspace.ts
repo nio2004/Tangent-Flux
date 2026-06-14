@@ -8,6 +8,23 @@ export function addResource(ideaId: string, input: string, title?: string): Prom
   });
 }
 
+<<<<<<< HEAD
+=======
+export function saveIdeaNotes(ideaId: string, markdown: string): Promise<{ id: string; title: string; markdown: string }> {
+  return request<{ id: string; title: string; markdown: string }>(`/ideas/${ideaId}/notes`, {
+    method: "PUT",
+    body: JSON.stringify({ markdown }),
+  });
+}
+
+export function saveCoverImage(ideaId: string, coverUrl: string | null): Promise<{ coverUrl: string | null }> {
+  return request<{ coverUrl: string | null }>(`/ideas/${ideaId}/cover`, {
+    method: "PUT",
+    body: JSON.stringify({ coverUrl }),
+  });
+}
+
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 export function addTask(ideaId: string, title: string, points = 2): Promise<KanbanTask> {
   return request<KanbanTask>(`/ideas/${ideaId}/tasks`, {
     method: "POST",

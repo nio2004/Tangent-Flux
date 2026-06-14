@@ -26,4 +26,16 @@ describe("kanban helpers", () => {
     assert.equal(next.todo.length, 0);
     assert.deepEqual(next.progress, [{ id: "map-flows", title: "Map flows", points: 2 }]);
   });
+
+  it("places the most recently moved task at the top of the target lane", () => {
+    const board: KanbanBoard = {
+      todo: [{ id: "map-flows", title: "Map flows", points: 2 }],
+      progress: [{ id: "draft-brief", title: "Draft brief", points: 1 }],
+      completed: [],
+    };
+
+    const next = moveTask(board, "map-flows", "progress");
+
+    assert.deepEqual(next.progress.map((task) => task.id), ["map-flows", "draft-brief"]);
+  });
 });

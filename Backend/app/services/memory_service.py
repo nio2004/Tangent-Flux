@@ -91,7 +91,12 @@ async def initialize_memory(db: Session, idea: Idea, initial_input: str | None =
         idea.memory_state = "AGENT_1_RUNNING"
         db.flush()
         sources = {chunk.id: chunk.text for chunk in chunks}
+<<<<<<< HEAD
         agent1 = await run_agent1(idea.problem or idea.description, sources)
+=======
+        intent = _idea_intent(idea)
+        agent1 = await run_agent1(intent, sources)
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
         _validate_agent1(agent1)
         _log_agent(db, idea.id, "AGENT_1", {"sources": list(sources)}, agent1.model_dump(), started)
         idea.agent_1_validated = True
@@ -137,6 +142,7 @@ def _reset_existing_memory(db: Session, idea: Idea) -> None:
 async def _run_agent2(db: Session, idea: Idea, agent1: Agent1Output, chunks: list[Chunk]) -> None:
     started = time.perf_counter()
     concept_embeddings = {concept: embedding_service.embed(concept) for concept in agent1.umbrella_concepts}
+<<<<<<< HEAD
     assignments: dict[str, list[Chunk]] = {concept: [] for concept in agent1.umbrella_concepts}
     for chunk in chunks:
         chunk_embedding = loads(chunk.embedding_json, [])
@@ -147,6 +153,11 @@ async def _run_agent2(db: Session, idea: Idea, agent1: Agent1Output, chunks: lis
         assignments[best].append(chunk)
     text_memory = await run_agent2_text_memory(
         idea.problem or idea.description,
+=======
+    assignments = _assign_chunks_to_concepts(agent1, chunks, concept_embeddings)
+    text_memory = await run_agent2_text_memory(
+        _idea_intent(idea),
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
         {concept: [chunk.text for chunk in assigned] for concept, assigned in assignments.items()},
     )
     summary_by_label = {item.label.lower(): item.summary for item in text_memory.node_summaries}
@@ -185,6 +196,72 @@ async def _run_agent2(db: Session, idea: Idea, agent1: Agent1Output, chunks: lis
     _log_agent(db, idea.id, "AGENT_2", {"concepts": agent1.umbrella_concepts}, {"textual_summary": text_memory.textual_summary}, started)
 
 
+<<<<<<< HEAD
+=======
+def _idea_intent(idea: Idea) -> str:
+    note_text = " ".join(note.markdown for note in idea.notes)
+    return " ".join(part for part in [idea.title, idea.description, idea.problem, note_text] if part).strip()
+
+
+def _assign_chunks_to_concepts(
+    agent1: Agent1Output,
+    chunks: list[Chunk],
+    concept_embeddings: dict[str, list[float]],
+) -> dict[str, list[Chunk]]:
+    assignments: dict[str, list[Chunk]] = {concept: [] for concept in agent1.umbrella_concepts}
+    assigned_ids: set[str] = set()
+    for chunk in chunks:
+        scores = {
+            concept: _chunk_concept_score(chunk, concept, agent1, concept_embeddings)
+            for concept in agent1.umbrella_concepts
+        }
+        best = max(scores, key=scores.get)
+        assignments[best].append(chunk)
+        assigned_ids.add(chunk.id)
+
+    for concept in agent1.umbrella_concepts:
+        if assignments[concept]:
+            continue
+        candidates = sorted(
+            chunks,
+            key=lambda chunk: _chunk_concept_score(chunk, concept, agent1, concept_embeddings),
+            reverse=True,
+        )
+        replacement = next((chunk for chunk in candidates if chunk.id not in assigned_ids), None)
+        if replacement:
+            assignments[concept].append(replacement)
+            assigned_ids.add(replacement.id)
+            continue
+        donor = max(assignments, key=lambda label: len(assignments[label]))
+        if len(assignments[donor]) > 1:
+            assignments[concept].append(assignments[donor].pop())
+
+    return {concept: assigned for concept, assigned in assignments.items() if assigned}
+
+
+def _chunk_concept_score(
+    chunk: Chunk,
+    concept: str,
+    agent1: Agent1Output,
+    concept_embeddings: dict[str, list[float]],
+) -> float:
+    chunk_embedding = loads(chunk.embedding_json, [])
+    score = cosine_similarity(chunk_embedding, concept_embeddings[concept])
+    text = chunk.text.lower()
+    concept_tokens = [token for token in concept.lower().replace("-", " ").split() if len(token) > 3]
+    if concept_tokens:
+        overlap = sum(1 for token in concept_tokens if token in text) / len(concept_tokens)
+        score += overlap * 0.45
+    mapped = [item.lower() for item in agent1.resource_to_umbrella_map.get(chunk.id, [])]
+    if concept.lower() in mapped:
+        score += 0.65
+    phrases = [phrase.lower() for phrase in agent1.keyphrase_map.get(chunk.id, [])]
+    if any(any(token in phrase for token in concept_tokens) for phrase in phrases):
+        score += 0.2
+    return score
+
+
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 def assert_memory_ready(db: Session, idea: Idea) -> IdeaMemory:
     memory = db.query(IdeaMemory).filter(IdeaMemory.idea_id == idea.id).first()
     nodes = db.query(GraphNode).filter(GraphNode.idea_id == idea.id).all()
@@ -275,7 +352,11 @@ async def dump_update(db: Session, idea: Idea, input_value: str) -> DumpResponse
         confidence=round(max_score, 4),
         actionsTaken=actions,
         reason=helper.reason,
+<<<<<<< HEAD
         updatedGraph=graph_out(nodes, edges),
+=======
+        updatedGraph=graph_out(nodes, edges, db),
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
     )
 
 
@@ -311,6 +392,29 @@ async def generate_tasks(db: Session, idea: Idea):
     return output
 
 
+<<<<<<< HEAD
+=======
+async def sync_context_to_memory_and_tasks(db: Session, idea: Idea, input_value: str, visible_resource: bool = False) -> None:
+    if not input_value.strip():
+        return
+    try:
+        if not idea.agent_1_validated or not idea.agent_2_validated or not idea.memory_initialized or idea.memory_state != "MEMORY_READY":
+            if len(input_value.strip()) < 20:
+                return
+            await initialize_memory(db, idea, input_value)
+        else:
+            await dump_update(db, idea, input_value)
+        if not visible_resource:
+            latest_resource = db.query(Resource).filter(Resource.idea_id == idea.id).order_by(Resource.created_at.desc()).first()
+            if latest_resource and latest_resource.type != "image":
+                latest_resource.type = "memory_update"
+                db.commit()
+        await generate_tasks(db, idea)
+    except HTTPException:
+        return
+
+
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 def _validate_agent1(output: Agent1Output) -> None:
     if not (1 <= len(output.umbrella_concepts) <= 8):
         raise ValueError("Agent 1 must produce 1-8 umbrella concepts.")

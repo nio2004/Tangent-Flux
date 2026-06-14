@@ -22,7 +22,11 @@ def hydrate_workspace(db: Session, idea: Idea) -> WorkspaceOut:
     tasks = db.query(Task).filter(Task.idea_id == idea.id).all()
     resources = (
         db.query(Resource)
+<<<<<<< HEAD
         .filter(Resource.idea_id == idea.id, Resource.type != "image")
+=======
+        .filter(Resource.idea_id == idea.id, Resource.type.notin_(["image", "memory_update"]))
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
         .order_by(Resource.created_at.desc())
         .all()
     )
@@ -38,6 +42,10 @@ def hydrate_workspace(db: Session, idea: Idea) -> WorkspaceOut:
         artifacts=[artifact_out(artifact) for artifact in artifacts],
         coverUrl=idea.cover_url,
         memory=memory_out(memory),
+<<<<<<< HEAD
         graph=graph_out(nodes, edges) if nodes else GraphOut(nodes=[], edges=[]),
+=======
+        graph=graph_out(nodes, edges, db) if nodes else GraphOut(nodes=[], edges=[]),
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
         agentRuns=[agent_run_out(run) for run in agent_runs],
     )

@@ -1,9 +1,17 @@
+<<<<<<< HEAD
 from fastapi import APIRouter, Depends
+=======
+from fastapi import APIRouter, Depends, HTTPException
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 from sqlalchemy.orm import Session
 
 from app.api.routes.ideas import _get_idea
 from app.core.database import get_db
+<<<<<<< HEAD
 from app.models import AgentRun, GraphEdge, GraphNode, IdeaMemory
+=======
+from app.models import AgentRun, GraphEdge, GraphNode, IdeaMemory, Resource
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 from app.schemas.memory import DumpRequest, DumpResponse, InitializeRequest, MemoryOut, QueryRequest, QueryResponse, ResourceCreate, ResourceOut
 from app.services.memory_service import create_resource_and_chunks, dump_update, generate_tasks, initialize_memory, query_memory
 from app.services.serialization import agent_run_out, graph_out, memory_out, resource_out
@@ -12,9 +20,28 @@ router = APIRouter(prefix="/ideas", tags=["memory"])
 
 
 @router.post("/{idea_id}/resources", response_model=ResourceOut)
+<<<<<<< HEAD
 def create_resource(idea_id: str, payload: ResourceCreate, db: Session = Depends(get_db)):
     idea = _get_idea(db, idea_id)
     resource, _ = create_resource_and_chunks(db, idea, payload.input, payload.title, fail_soft=True)
+=======
+async def create_resource(idea_id: str, payload: ResourceCreate, db: Session = Depends(get_db)):
+    idea = _get_idea(db, idea_id)
+    try:
+        if idea.memory_state == "MEMORY_READY" and idea.memory_initialized:
+            await dump_update(db, idea, payload.input)
+            await generate_tasks(db, idea)
+            resource = db.query(Resource).filter(Resource.idea_id == idea.id).order_by(Resource.created_at.desc()).first()
+            if payload.title and resource:
+                resource.title = payload.title
+                db.commit()
+                db.refresh(resource)
+            return resource_out(resource)
+        resource, _ = create_resource_and_chunks(db, idea, payload.input, payload.title)
+    except HTTPException:
+        db.rollback()
+        raise
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
     db.commit()
     db.refresh(resource)
     return resource_out(resource)
@@ -23,7 +50,11 @@ def create_resource(idea_id: str, payload: ResourceCreate, db: Session = Depends
 @router.get("/{idea_id}/resources", response_model=list[ResourceOut])
 def list_resources(idea_id: str, db: Session = Depends(get_db)):
     idea = _get_idea(db, idea_id)
+<<<<<<< HEAD
     return [resource_out(resource) for resource in idea.resources if resource.type != "image"]
+=======
+    return [resource_out(resource) for resource in idea.resources if resource.type not in {"image", "memory_update"}]
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 
 
 @router.post("/{idea_id}/initialize")
@@ -33,7 +64,11 @@ async def initialize(idea_id: str, payload: InitializeRequest, db: Session = Dep
     nodes = db.query(GraphNode).filter(GraphNode.idea_id == idea.id).all()
     edges = db.query(GraphEdge).filter(GraphEdge.idea_id == idea.id).all()
     memory = db.query(IdeaMemory).filter(IdeaMemory.idea_id == idea.id).first()
+<<<<<<< HEAD
     return {"memory": memory_out(memory), "graph": graph_out(nodes, edges)}
+=======
+    return {"memory": memory_out(memory), "graph": graph_out(nodes, edges, db)}
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 
 
 @router.post("/{idea_id}/dump", response_model=DumpResponse)
@@ -53,7 +88,11 @@ def get_graph(idea_id: str, db: Session = Depends(get_db)):
     idea = _get_idea(db, idea_id)
     nodes = db.query(GraphNode).filter(GraphNode.idea_id == idea.id).all()
     edges = db.query(GraphEdge).filter(GraphEdge.idea_id == idea.id).all()
+<<<<<<< HEAD
     return graph_out(nodes, edges)
+=======
+    return graph_out(nodes, edges, db)
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 
 
 @router.get("/{idea_id}/agent-runs")

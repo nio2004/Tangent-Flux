@@ -12,6 +12,18 @@ class NoteOut(BaseModel):
     markdown: str
 
 
+<<<<<<< HEAD
+=======
+class NoteUpdate(BaseModel):
+    markdown: str
+    title: str = "Research brief"
+
+
+class CoverUpdate(BaseModel):
+    coverUrl: str | None = None
+
+
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 class TimelineOut(BaseModel):
     id: str
     time: str

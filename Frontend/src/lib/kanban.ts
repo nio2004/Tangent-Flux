@@ -44,6 +44,6 @@ export function moveTask(board: KanbanBoard, taskId: string, targetLane: KanbanL
     return next;
   }
 
-  next[targetLane] = [...next[targetLane], movingTask];
+  next[targetLane] = [movingTask, ...next[targetLane]];
   return next;
 }

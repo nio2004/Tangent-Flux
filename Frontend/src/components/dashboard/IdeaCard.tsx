@@ -1,4 +1,5 @@
 import { ArrowUpRight, FileText, Layers3 } from "lucide-react";
+import { motion } from "framer-motion";
 import type { CSSProperties, MouseEvent } from "react";
 import type { Idea } from "../../types/idea.ts";
 import { Badge } from "../ui/badge.tsx";
@@ -10,22 +11,18 @@ interface IdeaCardProps {
 }
 
 const palette = [
-  { accent: "#168cff", accent2: "#ffd12f" },
-  { accent: "#ff2d3f", accent2: "#168cff" },
-  { accent: "#ffd12f", accent2: "#ff2d3f" },
-  { accent: "#d8e2ef", accent2: "#168cff" },
+  { accent: "var(--data-blue)", accent2: "var(--surface-chrome)" },
+  { accent: "var(--data-red)", accent2: "var(--surface-chrome)" },
+  { accent: "var(--accent-primary)", accent2: "var(--surface-chrome)" },
+  { accent: "var(--text-muted)", accent2: "var(--data-blue)" },
 ];
 
 export function IdeaCard({ idea, index, onOpen }: IdeaCardProps) {
   const colors = palette[index % palette.length];
-  const visualHeight = 94 + idea.importance * 12 + Math.min(idea.resources, 10) * 2;
-  const minHeight = 244 + idea.importance * 12 + idea.notes * 0.8;
   const style = {
     "--accent": colors.accent,
     "--accent-2": colors.accent2,
     "--texture": idea.texture,
-    "--visual-height": `${visualHeight}px`,
-    "--card-min-height": `${minHeight}px`,
     "--reveal-delay": `${index * 55}ms`,
     "--progress": `${idea.progress * 3.6}deg`,
   } as CSSProperties;
@@ -35,11 +32,17 @@ export function IdeaCard({ idea, index, onOpen }: IdeaCardProps) {
   }
 
   return (
-    <article
+    <motion.article
+      layout
       className="idea-card"
       style={style}
       tabIndex={0}
       onClick={openCard}
+      initial={{ opacity: 0, y: 18, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      whileHover={{ y: -4 }}
+      whileTap={{ scale: 0.985 }}
+      transition={{ delay: index * 0.045, duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
@@ -49,6 +52,7 @@ export function IdeaCard({ idea, index, onOpen }: IdeaCardProps) {
       aria-label={`Open ${idea.title} workspace`}
     >
       <div className="card-top">
+        {idea.coverUrl && <img className="card-cover-image" src={idea.coverUrl} alt="" aria-hidden="true" />}
         <span className="card-code">{idea.code}</span>
         <span className="progress-ring" aria-label={`${idea.progress}% complete`}>
           <span>{idea.progress}</span>
@@ -83,6 +87,6 @@ export function IdeaCard({ idea, index, onOpen }: IdeaCardProps) {
       </div>
 
       <ArrowUpRight className="card-corner" size={22} aria-hidden="true" />
-    </article>
+    </motion.article>
   );
 }

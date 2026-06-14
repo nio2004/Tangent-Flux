@@ -1,7 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+<<<<<<< HEAD
 
 from app.api.routes import artifacts, graph_overview, ideas, memory, tasks, timeline, uploads, workspace
+=======
+from sqlalchemy import inspect, text
+
+from app.api.routes import artifacts, chat, graph_overview, ideas, memory, tasks, timeline, uploads, workspace
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 from app.core.config import get_settings
 from app.core.database import Base, SessionLocal, engine
 from app.models import *  # noqa: F401,F403
@@ -14,6 +20,10 @@ app = FastAPI(title="Tangent-Flux Backend", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.frontend_origin, "http://localhost:5173", "http://127.0.0.1:5173"],
+<<<<<<< HEAD
+=======
+    allow_origin_regex=r"^http://(localhost|127\.0\.0\.1):\d+$",
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -27,11 +37,19 @@ app.include_router(tasks.router, prefix="/api")
 app.include_router(timeline.router, prefix="/api")
 app.include_router(artifacts.router, prefix="/api")
 app.include_router(uploads.router, prefix="/api")
+<<<<<<< HEAD
+=======
+app.include_router(chat.router, prefix="/api")
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 
 
 @app.on_event("startup")
 def startup() -> None:
     Base.metadata.create_all(bind=engine)
+<<<<<<< HEAD
+=======
+    ensure_lightweight_schema_updates()
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
     db = SessionLocal()
     try:
         seed_if_empty(db)
@@ -42,3 +60,17 @@ def startup() -> None:
 @app.get("/health")
 def health():
     return {"ok": True, "service": "tangent-flux-backend"}
+<<<<<<< HEAD
+=======
+
+
+def ensure_lightweight_schema_updates() -> None:
+    inspector = inspect(engine)
+    if "ideas" not in inspector.get_table_names():
+        return
+
+    idea_columns = {column["name"] for column in inspector.get_columns("ideas")}
+    with engine.begin() as connection:
+        if "cover_url" not in idea_columns:
+            connection.execute(text("ALTER TABLE ideas ADD COLUMN cover_url TEXT"))
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04

@@ -55,4 +55,8 @@ class IdeaOut(BaseModel):
     texture: str
     problem: str
     memoryState: str
+<<<<<<< HEAD
+=======
+    coverUrl: str | None = None
+>>>>>>> 6f1c767a5b6ce400673ed3b3987875468dd9fa04
 
