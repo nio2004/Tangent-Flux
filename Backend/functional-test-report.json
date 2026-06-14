@@ -1,0 +1,234 @@
+{
+  "base_url": "http://127.0.0.1:8001",
+  "state": {
+    "idea_id": "032c5b8f-6aeb-4966-b6bf-4654303161a3",
+    "init_nodes": 6,
+    "init_edges": 1,
+    "related_decision": "ACCOMMODATE",
+    "novel_decision": "ACCOMMODATE",
+    "bridge_decision": "ACCOMMODATE",
+    "query_sources": [
+      "grpo",
+      "fine",
+      "unsloth training appears"
+    ],
+    "generated_tasks": 3,
+    "todo_count": 3,
+    "agent_log_count": 6,
+    "final_memory_state": "MEMORY_READY",
+    "final_nodes": 9,
+    "final_edges": 1
+  },
+  "results": [
+    {
+      "name": "health",
+      "method": "GET",
+      "path": "/health",
+      "status": 200,
+      "expected": null,
+      "ok": true,
+      "latency_ms": 27,
+      "summary": [
+        "ok",
+        "service"
+      ]
+    },
+    {
+      "name": "list ideas",
+      "method": "GET",
+      "path": "/api/ideas",
+      "status": 200,
+      "expected": null,
+      "ok": true,
+      "latency_ms": 32,
+      "summary": {
+        "count": 7
+      }
+    },
+    {
+      "name": "create idea",
+      "method": "POST",
+      "path": "/api/ideas",
+      "status": 200,
+      "expected": null,
+      "ok": true,
+      "latency_ms": 11,
+      "summary": {
+        "id": "032c5b8f-6aeb-4966-b6bf-4654303161a3",
+        "title": "Functional Test Memory",
+        "memoryState": "EMPTY"
+      }
+    },
+    {
+      "name": "workspace before init",
+      "method": "GET",
+      "path": "/api/ideas/032c5b8f-6aeb-4966-b6bf-4654303161a3/workspace",
+      "status": 200,
+      "expected": null,
+      "ok": true,
+      "latency_ms": 13,
+      "summary": {
+        "graph_nodes": 0,
+        "graph_edges": 0
+      }
+    },
+    {
+      "name": "agent3 guard before init",
+      "method": "POST",
+      "path": "/api/ideas/032c5b8f-6aeb-4966-b6bf-4654303161a3/dump",
+      "status": 409,
+      "expected": 409,
+      "ok": true,
+      "latency_ms": 28,
+      "summary": [
+        "detail"
+      ]
+    },
+    {
+      "name": "initialize memory",
+      "method": "POST",
+      "path": "/api/ideas/032c5b8f-6aeb-4966-b6bf-4654303161a3/initialize",
+      "status": 200,
+      "expected": null,
+      "ok": true,
+      "latency_ms": 11479,
+      "summary": {
+        "graph_nodes": 6,
+        "graph_edges": 1
+      }
+    },
+    {
+      "name": "graph after init",
+      "method": "GET",
+      "path": "/api/ideas/032c5b8f-6aeb-4966-b6bf-4654303161a3/graph",
+      "status": 200,
+      "expected": null,
+      "ok": true,
+      "latency_ms": 23,
+      "summary": {
+        "nodes": 6,
+        "edges": 1
+      }
+    },
+    {
+      "name": "memory after init",
+      "method": "GET",
+      "path": "/api/ideas/032c5b8f-6aeb-4966-b6bf-4654303161a3/memory",
+      "status": 200,
+      "expected": null,
+      "ok": true,
+      "latency_ms": 3,
+      "summary": [
+        "textualSummary",
+        "conceptMap"
+      ]
+    },
+    {
+      "name": "dump related update",
+      "method": "POST",
+      "path": "/api/ideas/032c5b8f-6aeb-4966-b6bf-4654303161a3/dump",
+      "status": 200,
+      "expected": null,
+      "ok": true,
+      "latency_ms": 1368,
+      "summary": {
+        "decision": "ACCOMMODATE",
+        "confidence": 0.3464
+      }
+    },
+    {
+      "name": "dump novel update",
+      "method": "POST",
+      "path": "/api/ideas/032c5b8f-6aeb-4966-b6bf-4654303161a3/dump",
+      "status": 200,
+      "expected": null,
+      "ok": true,
+      "latency_ms": 1391,
+      "summary": {
+        "decision": "ACCOMMODATE",
+        "confidence": 0.2294
+      }
+    },
+    {
+      "name": "dump bridge update",
+      "method": "POST",
+      "path": "/api/ideas/032c5b8f-6aeb-4966-b6bf-4654303161a3/dump",
+      "status": 200,
+      "expected": null,
+      "ok": true,
+      "latency_ms": 1330,
+      "summary": {
+        "decision": "ACCOMMODATE",
+        "confidence": 0.2462
+      }
+    },
+    {
+      "name": "query memory",
+      "method": "POST",
+      "path": "/api/ideas/032c5b8f-6aeb-4966-b6bf-4654303161a3/query",
+      "status": 200,
+      "expected": null,
+      "ok": true,
+      "latency_ms": 1378,
+      "summary": {
+        "answer": "Based on grpo, fine, unsloth training appears: grpo: grpo is present in the initial idea memory. fine: fine is present in the initial idea memory. tuning: GRPO fine tuning can reduce memory pressure on small GPUs. Evaluation metrics should compare reward quality and task success. CLIP bridges image and text representations for multimodal retrieval and contrastive learning. reduce: reduce is present in the initial idea memory. memory: memory is present in the initial idea memory. pressure: pressure is present in the initial idea memory.\n\nNew ",
+        "sourceNodes": [
+          "grpo",
+          "fine",
+          "unsloth training appears"
+        ]
+      }
+    },
+    {
+      "name": "generate tasks",
+      "method": "POST",
+      "path": "/api/ideas/032c5b8f-6aeb-4966-b6bf-4654303161a3/generate",
+      "status": 200,
+      "expected": null,
+      "ok": true,
+      "latency_ms": 29,
+      "summary": {
+        "tasks_generated": 3
+      }
+    },
+    {
+      "name": "tasks board",
+      "method": "GET",
+      "path": "/api/ideas/032c5b8f-6aeb-4966-b6bf-4654303161a3/tasks",
+      "status": 200,
+      "expected": null,
+      "ok": true,
+      "latency_ms": 4,
+      "summary": [
+        "todo",
+        "progress",
+        "completed"
+      ]
+    },
+    {
+      "name": "agent logs",
+      "method": "GET",
+      "path": "/api/ideas/032c5b8f-6aeb-4966-b6bf-4654303161a3/agent-runs",
+      "status": 200,
+      "expected": null,
+      "ok": true,
+      "latency_ms": 16,
+      "summary": {
+        "count": 6
+      }
+    },
+    {
+      "name": "workspace final",
+      "method": "GET",
+      "path": "/api/ideas/032c5b8f-6aeb-4966-b6bf-4654303161a3/workspace",
+      "status": 200,
+      "expected": null,
+      "ok": true,
+      "latency_ms": 18,
+      "summary": {
+        "graph_nodes": 9,
+        "graph_edges": 1
+      }
+    }
+  ]
+}

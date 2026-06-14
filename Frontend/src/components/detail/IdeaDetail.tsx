@@ -1,8 +1,18 @@
-import { ChevronLeft, ChevronRight, Image, PanelLeftClose, PanelLeftOpen, Sparkles, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, GitBranch, Image, PanelLeftClose, PanelLeftOpen, Sparkles, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
-import { gallery, resources, timeline } from "../../data/ideas.ts";
-import type { GallerySlide, Idea, KanbanBoard, KanbanLaneId, KanbanTask } from "../../types/idea.ts";
+import { useEffect, useState } from "react";
+import type {
+  GallerySlide,
+  GraphEdge,
+  GraphNode,
+  Idea,
+  IdeaMemory,
+  KanbanBoard,
+  KanbanLaneId,
+  KanbanTask,
+  ResourcePreview,
+  TimelineEntry,
+} from "../../types/idea.ts";
 import { Badge } from "../ui/badge.tsx";
 import { Button } from "../ui/button.tsx";
 import { CoverDropzone } from "./CoverDropzone.tsx";
@@ -18,20 +28,37 @@ interface IdeaDetailProps {
   notes: string;
   cover: string | null;
   board: KanbanBoard;
+  resources: ResourcePreview[];
+  timeline: TimelineEntry[];
+  gallery: GallerySlide[];
+  memory: IdeaMemory | null;
+  graph: { nodes: GraphNode[]; edges: GraphEdge[] };
+  loading: boolean;
+  error: string | null;
   onClose: () => void;
   onNotesSave: (notes: string) => void;
   onCoverChange: (cover: string) => void;
   onMoveTask: (taskId: string, lane: KanbanLaneId) => void;
-  onAddTask: (task: KanbanTask) => void;
+  onAddTask: (task: KanbanTask) => Promise<void> | void;
+  onWorkspaceChange: () => Promise<void>;
+  onInitializeMemory: () => Promise<void>;
 }
 
 function GalleryPanel({ slides }: { slides: GallerySlide[] }) {
   const [index, setIndex] = useState(0);
-  const slide = slides[index];
-  const position = `${String(index + 1).padStart(2, "0")} / ${String(slides.length).padStart(2, "0")}`;
+  useEffect(() => setIndex(0), [slides]);
+  const fallback: GallerySlide = {
+    title: "No diagrams yet",
+    caption: "Upload an image from Studio Controls to ingest it with vision.",
+    art: "mesh",
+  };
+  const safeIndex = slides.length ? Math.min(index, slides.length - 1) : 0;
+  const slide = slides[safeIndex] ?? fallback;
+  const total = Math.max(slides.length, 1);
+  const position = `${String(safeIndex + 1).padStart(2, "0")} / ${String(total).padStart(2, "0")}`;
 
   function move(direction: number) {
-    setIndex((current) => (current + direction + slides.length) % slides.length);
+    setIndex((current) => (current + direction + total) % total);
   }
 
   return (
@@ -60,11 +87,110 @@ function GalleryPanel({ slides }: { slides: GallerySlide[] }) {
           exit={{ opacity: 0, y: -12, scale: 0.98 }}
           transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
         >
-          <Image size={28} aria-hidden="true" />
-          <span>{slide.title}</span>
+          {slide.assetUrl ? (
+            <img src={slide.assetUrl} alt={slide.title} />
+          ) : (
+            <>
+              <Image size={28} aria-hidden="true" />
+              <span>{slide.title}</span>
+            </>
+          )}
         </motion.div>
       </AnimatePresence>
       <p className="gallery-caption">{slide.caption}</p>
+    </section>
+  );
+}
+
+function LocalMemoryPanel({
+  memory,
+  graph,
+  memoryState,
+  loading,
+  onInitializeMemory,
+}: {
+  memory: IdeaMemory | null;
+  graph: { nodes: GraphNode[]; edges: GraphEdge[] };
+  memoryState?: string;
+  loading: boolean;
+  onInitializeMemory: () => Promise<void>;
+}) {
+  const nodes = graph.nodes;
+  const edges = graph.edges;
+  const hasMemory = Boolean(memory?.textualSummary || nodes.length);
+
+  return (
+    <section className="workspace-panel local-memory-panel" id="memory">
+      <div className="panel-heading">
+        <div>
+          <p className="eyebrow">Local Memory</p>
+          <h3>Agent-made concept graph</h3>
+        </div>
+        <Button variant="ghost" onClick={onInitializeMemory} disabled={loading}>
+          <GitBranch size={16} aria-hidden="true" />
+          <span>{hasMemory ? "Rebuild" : "Initialize"}</span>
+        </Button>
+      </div>
+
+      {hasMemory ? (
+        <div className="local-memory-layout">
+          <div className="memory-summary">
+            <p>{memory?.textualSummary || "Memory summary is not written yet."}</p>
+            <div className="memory-stats">
+              <span>{memoryState ?? "EMPTY"}</span>
+              <span>{nodes.length} nodes</span>
+              <span>{edges.length} edges</span>
+            </div>
+          </div>
+          <div className="local-graph" aria-label="Local idea graph visualization">
+            {edges.map((edge: GraphEdge) => {
+              const sourceIndex = nodes.findIndex((node) => node.id === edge.source);
+              const targetIndex = nodes.findIndex((node) => node.id === edge.target);
+              if (sourceIndex < 0 || targetIndex < 0) {
+                return null;
+              }
+              const sourceAngle = (sourceIndex / Math.max(nodes.length, 1)) * Math.PI * 2;
+              const targetAngle = (targetIndex / Math.max(nodes.length, 1)) * Math.PI * 2;
+              const sourceX = 50 + Math.cos(sourceAngle) * 32;
+              const sourceY = 50 + Math.sin(sourceAngle) * 30;
+              const targetX = 50 + Math.cos(targetAngle) * 32;
+              const targetY = 50 + Math.sin(targetAngle) * 30;
+              const dx = targetX - sourceX;
+              const dy = targetY - sourceY;
+
+              return (
+                <span
+                  key={edge.id}
+                  className={edge.edgeType === "BRIDGE" ? "local-edge is-bridge" : "local-edge"}
+                  title={`${edge.edgeType} ${edge.weight.toFixed(2)}`}
+                  style={{
+                    left: `${sourceX}%`,
+                    top: `${sourceY}%`,
+                    width: `${Math.hypot(dx, dy)}%`,
+                    transform: `rotate(${Math.atan2(dy, dx) * (180 / Math.PI)}deg)`,
+                  }}
+                />
+              );
+            })}
+            {nodes.map((node: GraphNode, index: number) => {
+              const angle = (index / Math.max(nodes.length, 1)) * Math.PI * 2;
+              const left = nodes.length === 1 ? 50 : 50 + Math.cos(angle) * 32;
+              const top = nodes.length === 1 ? 50 : 50 + Math.sin(angle) * 30;
+              return (
+                <div key={node.id} className="local-node" title={node.summary} style={{ left: `${left}%`, top: `${top}%` }}>
+                  <strong>{node.label}</strong>
+                  <span>{node.memberCount} chunks</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="memory-empty">
+          <GitBranch size={22} aria-hidden="true" />
+          <p>Add linked evidence or diagrams, then initialize memory to see the local graph.</p>
+        </div>
+      )}
     </section>
   );
 }
@@ -75,11 +201,20 @@ export function IdeaDetail({
   notes,
   cover,
   board,
+  resources,
+  timeline,
+  gallery,
+  memory,
+  graph,
+  loading,
+  error,
   onClose,
   onNotesSave,
   onCoverChange,
   onMoveTask,
   onAddTask,
+  onWorkspaceChange,
+  onInitializeMemory,
 }: IdeaDetailProps) {
   const [kanbanExpanded, setKanbanExpanded] = useState(false);
   const [studioOpen, setStudioOpen] = useState(false);
@@ -119,10 +254,11 @@ export function IdeaDetail({
               <p className="eyebrow">Momentum</p>
               <strong>{idea.progress}%</strong>
               <span>{idea.resources} sources / {idea.notes} notes</span>
+              {idea.memoryState && <span>{idea.memoryState}</span>}
             </div>
 
             <nav className="detail-nav" aria-label="Idea workspace sections">
-              {["Overview", "Notes", "Tasks", "Resources", "Gallery", "Timeline"].map((item) => (
+              {["Overview", "Notes", "Memory", "Tasks", "Resources", "Gallery", "Timeline"].map((item) => (
                 <a href={`#${item.toLowerCase()}`} key={item}>
                   <ChevronLeft size={14} aria-hidden="true" />
                   {item}
@@ -137,6 +273,12 @@ export function IdeaDetail({
           </aside>
 
           <main className="detail-main">
+            {(loading || error) && (
+              <section className="workspace-panel workspace-status">
+                <p className="eyebrow">{loading ? "Syncing" : "Backend issue"}</p>
+                <p>{loading ? "Loading workspace data..." : error}</p>
+              </section>
+            )}
             <section className={cover ? "detail-hero has-cover" : "detail-hero"} id="overview">
               <CoverDropzone cover={cover} onCoverChange={onCoverChange} />
               <div className="detail-hero-copy">
@@ -178,6 +320,14 @@ export function IdeaDetail({
                 </div>
               </section>
 
+              <LocalMemoryPanel
+                memory={memory}
+                graph={graph}
+                memoryState={idea.memoryState}
+                loading={loading}
+                onInitializeMemory={onInitializeMemory}
+              />
+
               <section className="detail-section task-context-layout" aria-label="Task and context mesh">
                 <KanbanWorkspace
                   board={board}
@@ -194,7 +344,13 @@ export function IdeaDetail({
         </motion.div>
       </motion.section>
 
-      <StudioControlsOverlay open={studioOpen} onClose={() => setStudioOpen(false)} onAddTask={onAddTask} />
+      <StudioControlsOverlay
+        open={studioOpen}
+        ideaId={idea.id}
+        onClose={() => setStudioOpen(false)}
+        onAddTask={onAddTask}
+        onWorkspaceChange={onWorkspaceChange}
+      />
     </>
   );
 }

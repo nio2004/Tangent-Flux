@@ -6,15 +6,16 @@ interface TopbarProps {
   query: string;
   onQueryChange: (query: string) => void;
   onQuickAdd: () => void;
+  activeView: "board" | "graph";
+  onViewChange: (view: "board" | "graph") => void;
 }
 
 const tabs = [
-  { label: "Board", icon: Columns3, active: true },
-  { label: "Graph", icon: Share2, active: false },
-  { label: "Archive", icon: Archive, active: false },
+  { label: "Board", icon: Columns3, view: "board" as const },
+  { label: "Graph", icon: Share2, view: "graph" as const },
 ];
 
-export function Topbar({ query, onQueryChange, onQuickAdd }: TopbarProps) {
+export function Topbar({ query, onQueryChange, onQuickAdd, activeView, onViewChange }: TopbarProps) {
   return (
     <header className="topbar">
       <div className="topbar-left">
@@ -23,18 +24,22 @@ export function Topbar({ query, onQueryChange, onQuickAdd }: TopbarProps) {
           <span>Tangent-Flux</span>
         </a>
         <nav className="feed-tabs" aria-label="Workspace views">
-          {tabs.map(({ label, icon: Icon, active }) => (
+          {tabs.map(({ label, icon: Icon, view }) => (
             <button
-              className={active ? "feed-tab is-active" : "feed-tab"}
+              className={activeView === view ? "feed-tab is-active" : "feed-tab"}
               type="button"
               key={label}
-              aria-current={active ? "page" : undefined}
-              disabled={!active}
+              aria-current={activeView === view ? "page" : undefined}
+              onClick={() => onViewChange(view)}
             >
               <Icon size={15} aria-hidden="true" />
               <span>{label}</span>
             </button>
           ))}
+          <button className="feed-tab" type="button" disabled>
+            <Archive size={15} aria-hidden="true" />
+            <span>Archive</span>
+          </button>
         </nav>
       </div>
 
