@@ -20,11 +20,14 @@ def get_workspace(idea_id: str, db: Session = Depends(get_db)):
 @router.put("/{idea_id}/notes", response_model=NoteOut)
 async def save_notes(idea_id: str, payload: NoteUpdate, db: Session = Depends(get_db)):
     idea = _get_idea(db, idea_id)
-    note = idea.notes[0] if idea.notes else IdeaNote(idea_id=idea.id)
-    note.title = payload.title
-    note.markdown = payload.markdown
+    note = db.query(IdeaNote).filter(IdeaNote.idea_id == idea.id).order_by(IdeaNote.created_at.asc()).first()
+    if note:
+        note.title = payload.title
+        note.markdown = payload.markdown
+    else:
+        note = IdeaNote(idea_id=idea.id, title=payload.title, markdown=payload.markdown)
     db.add(note)
-    db.add(TimelineEntry(idea_id=idea.id, entry_type="note", content="Updated idea dump."))
+    db.add(TimelineEntry(idea_id=idea.id, entry_type="note", content="Saved idea dump."))
     db.commit()
     db.refresh(note)
     await sync_context_to_memory_and_tasks(db, idea, payload.markdown)

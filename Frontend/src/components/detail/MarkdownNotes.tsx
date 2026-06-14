@@ -1,16 +1,20 @@
 import { Edit3, Eye, Save } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { renderMarkdown } from "../../lib/markdown.ts";
 import { Button } from "../ui/button.tsx";
 
 interface MarkdownNotesProps {
   value: string;
-  onSave: (value: string) => void;
+  onSave: (value: string) => Promise<void> | void;
 }
 
 export function MarkdownNotes({ value, onSave }: MarkdownNotesProps) {
   const [draft, setDraft] = useState(value);
   const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
 
   return (
     <section className="workspace-panel notes-shell idea-dump-panel" id="notes">
@@ -35,8 +39,8 @@ export function MarkdownNotes({ value, onSave }: MarkdownNotesProps) {
           />
           <Button
             variant="hot"
-            onClick={() => {
-              onSave(draft);
+            onClick={async () => {
+              await onSave(draft);
               setEditing(false);
             }}
           >

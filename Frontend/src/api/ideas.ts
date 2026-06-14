@@ -35,3 +35,10 @@ export function initializeMemory(ideaId: string, input?: string): Promise<{ memo
     body: JSON.stringify({ input }),
   });
 }
+
+export function saveIdeaNote(ideaId: string, markdown: string): Promise<{ id: string; title: string; markdown: string }> {
+  return request<{ id: string; title: string; markdown: string }>(`/ideas/${ideaId}/notes`, {
+    method: "PUT",
+    body: JSON.stringify({ markdown }),
+  });
+}

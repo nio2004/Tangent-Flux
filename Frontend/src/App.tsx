@@ -200,10 +200,12 @@ function App() {
   }
 
   async function handleNotesSave(markdown: string) {
-    setNotes(markdown);
     if (!selectedIdea) {
+      setNotes(markdown);
       return;
     }
+    setWorkspaceError(null);
+    setNotes(markdown);
     try {
       await saveIdeaNotes(selectedIdea.id, markdown);
       await refreshSelectedWorkspace();
