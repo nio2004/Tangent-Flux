@@ -332,7 +332,7 @@ async def dump_update(db: Session, idea: Idea, input_value: str) -> DumpResponse
         confidence=round(max_score, 4),
         actionsTaken=actions,
         reason=helper.reason,
-        updatedGraph=graph_out(nodes, edges),
+        updatedGraph=graph_out(nodes, edges, db),
     )
 
 

@@ -33,7 +33,7 @@ async def initialize(idea_id: str, payload: InitializeRequest, db: Session = Dep
     nodes = db.query(GraphNode).filter(GraphNode.idea_id == idea.id).all()
     edges = db.query(GraphEdge).filter(GraphEdge.idea_id == idea.id).all()
     memory = db.query(IdeaMemory).filter(IdeaMemory.idea_id == idea.id).first()
-    return {"memory": memory_out(memory), "graph": graph_out(nodes, edges)}
+    return {"memory": memory_out(memory), "graph": graph_out(nodes, edges, db)}
 
 
 @router.post("/{idea_id}/dump", response_model=DumpResponse)
@@ -53,7 +53,7 @@ def get_graph(idea_id: str, db: Session = Depends(get_db)):
     idea = _get_idea(db, idea_id)
     nodes = db.query(GraphNode).filter(GraphNode.idea_id == idea.id).all()
     edges = db.query(GraphEdge).filter(GraphEdge.idea_id == idea.id).all()
-    return graph_out(nodes, edges)
+    return graph_out(nodes, edges, db)
 
 
 @router.get("/{idea_id}/agent-runs")
