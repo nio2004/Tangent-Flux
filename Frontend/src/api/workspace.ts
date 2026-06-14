@@ -15,6 +15,13 @@ export function saveIdeaNotes(ideaId: string, markdown: string): Promise<{ id: s
   });
 }
 
+export function saveCoverImage(ideaId: string, coverUrl: string | null): Promise<{ coverUrl: string | null }> {
+  return request<{ coverUrl: string | null }>(`/ideas/${ideaId}/cover`, {
+    method: "PUT",
+    body: JSON.stringify({ coverUrl }),
+  });
+}
+
 export function addTask(ideaId: string, title: string, points = 2): Promise<KanbanTask> {
   return request<KanbanTask>(`/ideas/${ideaId}/tasks`, {
     method: "POST",

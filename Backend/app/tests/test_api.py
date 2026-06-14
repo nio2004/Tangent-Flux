@@ -176,6 +176,27 @@ def test_workspace_mutations_for_studio_controls(client: TestClient):
     assert payload["tasks"]["todo"]
 
 
+def test_cover_image_persists_in_workspace(client: TestClient):
+    idea = client.post(
+        "/api/ideas",
+        json={
+            "title": "Cover Persistence Test",
+            "description": "Testing cover image persistence.",
+            "problem": "Uploaded covers should survive workspace reloads.",
+            "tags": ["Test"],
+        },
+    ).json()
+    cover_url = "data:image/png;base64,ZmFrZS1jb3Zlcg=="
+
+    cover = client.put(f"/api/ideas/{idea['id']}/cover", json={"coverUrl": cover_url})
+    assert cover.status_code == 200
+    assert cover.json()["coverUrl"] == cover_url
+
+    workspace = client.get(f"/api/ideas/{idea['id']}/workspace")
+    assert workspace.status_code == 200
+    assert workspace.json()["coverUrl"] == cover_url
+
+
 def test_failed_resource_is_not_persisted(client: TestClient):
     idea = client.post(
         "/api/ideas",

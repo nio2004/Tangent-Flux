@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import inspect, text
 
 from app.api.routes import artifacts, chat, graph_overview, ideas, memory, tasks, timeline, uploads, workspace
 from app.core.config import get_settings
@@ -14,6 +15,7 @@ app = FastAPI(title="Tangent-Flux Backend", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.frontend_origin, "http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origin_regex=r"^http://(localhost|127\.0\.0\.1):\d+$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -33,6 +35,7 @@ app.include_router(chat.router, prefix="/api")
 @app.on_event("startup")
 def startup() -> None:
     Base.metadata.create_all(bind=engine)
+    ensure_lightweight_schema_updates()
     db = SessionLocal()
     try:
         seed_if_empty(db)
@@ -43,3 +46,14 @@ def startup() -> None:
 @app.get("/health")
 def health():
     return {"ok": True, "service": "tangent-flux-backend"}
+
+
+def ensure_lightweight_schema_updates() -> None:
+    inspector = inspect(engine)
+    if "ideas" not in inspector.get_table_names():
+        return
+
+    idea_columns = {column["name"] for column in inspector.get_columns("ideas")}
+    with engine.begin() as connection:
+        if "cover_url" not in idea_columns:
+            connection.execute(text("ALTER TABLE ideas ADD COLUMN cover_url TEXT"))
