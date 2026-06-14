@@ -9,7 +9,7 @@ from sqlalchemy.pool import StaticPool
 from app.core.database import Base, get_db
 from app.main import app
 from app.api.routes import uploads
-from app.services import chat_service
+from app.services import chat_service, parser_service
 from app.services.seed_service import seed_if_empty
 
 PNG_1X1 = base64.b64decode(
@@ -109,10 +109,13 @@ def test_workspace_mutations_for_studio_controls(client: TestClient):
 
     resource = client.post(
         f"/api/ideas/{idea_id}/resources",
-        json={"input": "https://example.com/tangent-flux", "title": "Example link"},
+        json={
+            "input": "This linked evidence describes Tangent-Flux studio controls, persistent resources, timeline logs, and task creation workflows.",
+            "title": "Example evidence",
+        },
     )
     assert resource.status_code == 200
-    assert resource.json()["title"] == "Example link"
+    assert resource.json()["title"] == "Example evidence"
 
     artifact = client.post(
         f"/api/ideas/{idea_id}/artifacts",
@@ -142,6 +145,131 @@ def test_workspace_mutations_for_studio_controls(client: TestClient):
     assert payload["artifacts"]
     assert payload["timeline"]
     assert payload["tasks"]["todo"]
+
+
+def test_failed_resource_is_not_persisted(client: TestClient):
+    idea = client.post(
+        "/api/ideas",
+        json={
+            "title": "Failed Resource Test",
+            "description": "Testing that failed linked attachments stay out of the resource stack.",
+            "problem": "Failed resource parses should be visible as errors only.",
+            "tags": ["Test"],
+        },
+    ).json()
+    idea_id = idea["id"]
+
+    resource = client.post(
+        f"/api/ideas/{idea_id}/resources",
+        json={"input": "too short", "title": "Broken link"},
+    )
+    assert resource.status_code == 422
+    assert "Raw text must be at least 20 characters" in resource.json()["detail"]
+
+    resources = client.get(f"/api/ideas/{idea_id}/resources")
+    assert resources.status_code == 200
+    assert resources.json() == []
+
+
+def test_bare_domain_resource_is_treated_as_url(client: TestClient, monkeypatch: pytest.MonkeyPatch):
+    class FakeResponse:
+        text = "<html><title>ChatGPT</title><body>" + ("useful source material " * 20) + "</body></html>"
+
+        def raise_for_status(self) -> None:
+            return None
+
+    captured_urls: list[str] = []
+
+    def fake_get(url: str, **_kwargs):
+        captured_urls.append(url)
+        return FakeResponse()
+
+    monkeypatch.setattr(parser_service.requests, "get", fake_get)
+    idea = client.post(
+        "/api/ideas",
+        json={
+            "title": "Bare Domain Test",
+            "description": "Testing bare domains in linked attachments.",
+            "problem": "Users should not need to type a URL scheme.",
+            "tags": ["Test"],
+        },
+    ).json()
+
+    resource = client.post(
+        f"/api/ideas/{idea['id']}/resources",
+        json={"input": "chatgpt.com", "title": "ChatGPT"},
+    )
+    assert resource.status_code == 200
+    assert captured_urls == ["https://chatgpt.com"]
+    assert resource.json()["sourceUrl"] == "https://chatgpt.com"
+
+
+def test_short_webpage_resource_returns_actionable_error(client: TestClient, monkeypatch: pytest.MonkeyPatch):
+    class FakeResponse:
+        text = "<html><title>Short Page</title><body>Short page.</body></html>"
+
+        def raise_for_status(self) -> None:
+            return None
+
+    monkeypatch.setattr(parser_service.requests, "get", lambda *_args, **_kwargs: FakeResponse())
+    idea = client.post(
+        "/api/ideas",
+        json={
+            "title": "Short Page Test",
+            "description": "Testing short webpage errors.",
+            "problem": "Users need useful parser failure messages.",
+            "tags": ["Test"],
+        },
+    ).json()
+
+    resource = client.post(
+        f"/api/ideas/{idea['id']}/resources",
+        json={"input": "chatgpt.com", "title": "ChatGPT"},
+    )
+    assert resource.status_code == 422
+    assert "did not expose enough readable text" in resource.json()["detail"]
+
+
+def test_webpage_resource_uses_visible_text_fallback(client: TestClient, monkeypatch: pytest.MonkeyPatch):
+    class FakeResponse:
+        text = """
+        <html>
+          <head><title>Great Articles</title><script>window.noisy = true;</script></head>
+          <body>
+            <h1>150 Great Articles and Essays</h1>
+            <p>The best classic and new articles, nonfiction and essays from around the net.</p>
+            <ul>
+              <li>Attitude by Margaret Atwood</li>
+              <li>This is Water by David Foster Wallace</li>
+              <li>On Keeping a Notebook by Joan Didion</li>
+            </ul>
+            <p>""" + ("interesting readable article list content " * 12) + """</p>
+          </body>
+        </html>
+        """
+
+        def raise_for_status(self) -> None:
+            return None
+
+    monkeypatch.setattr(parser_service.requests, "get", lambda *_args, **_kwargs: FakeResponse())
+    idea = client.post(
+        "/api/ideas",
+        json={
+            "title": "Visible Text Fallback Test",
+            "description": "Testing visible HTML text extraction.",
+            "problem": "Index pages should become resources when they contain readable text.",
+            "tags": ["Test"],
+        },
+    ).json()
+
+    resource = client.post(
+        f"/api/ideas/{idea['id']}/resources",
+        json={"input": "https://tetw.org/Greats", "title": "Greats"},
+    )
+    assert resource.status_code == 200
+    assert resource.json()["title"] == "Greats"
+    assert resource.json()["meta"] == "webpage / parsed"
+    assert "150 Great Articles" in resource.json()["description"]
 
 
 def test_image_upload_and_graph_overview(client: TestClient, monkeypatch: pytest.MonkeyPatch):

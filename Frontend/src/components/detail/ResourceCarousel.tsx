@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import type { MouseEvent } from "react";
 import { useState } from "react";
 import type { ResourcePreview } from "../../types/idea.ts";
 import { Button } from "../ui/button.tsx";
@@ -14,6 +15,18 @@ export function ResourceCarousel({ resources }: ResourceCarouselProps) {
 
   function move(direction: number) {
     setResourceIndex((current) => (current + direction + resources.length) % resources.length);
+  }
+
+  function showNextResource() {
+    setResourceIndex((current) => (current + 1) % resources.length);
+  }
+
+  function openResource(event: MouseEvent<HTMLButtonElement>, resource: ResourcePreview) {
+    event.stopPropagation();
+    if (!resource.sourceUrl) {
+      return;
+    }
+    window.open(resource.sourceUrl, "_blank", "noopener,noreferrer");
   }
 
   return (
@@ -43,7 +56,15 @@ export function ResourceCarousel({ resources }: ResourceCarouselProps) {
               <motion.article
                 className={`resource-slide offset-${offset}`}
                 key={resource.title}
-                onClick={() => setResourceIndex((resourceIndex + 1) % resources.length)}
+                role="button"
+                tabIndex={0}
+                onClick={showNextResource}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    showNextResource();
+                  }
+                }}
                 initial={{ opacity: 0, y: 24, rotate: -1 }}
                 animate={{
                   opacity: active ? 1 : offset === 1 ? 0.62 : 0.22,
@@ -66,23 +87,16 @@ export function ResourceCarousel({ resources }: ResourceCarouselProps) {
                 <p>{resource.description}</p>
                 <div className="resource-meta">
                   <span>{resource.meta}</span>
-                  {resource.sourceUrl ? (
-                    <a
-                      href={resource.sourceUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={(event) => event.stopPropagation()}
-                      aria-label={`Open ${resource.title}`}
-                    >
-                      <ExternalLink size={14} aria-hidden="true" />
-                      Open
-                    </a>
-                  ) : (
-                    <span>
-                      <ExternalLink size={14} aria-hidden="true" />
-                      Stored
-                    </span>
-                  )}
+                  <button
+                    className="resource-open"
+                    type="button"
+                    onClick={(event) => openResource(event, resource)}
+                    disabled={!resource.sourceUrl}
+                    aria-label={resource.sourceUrl ? `Open ${resource.title}` : `No source URL for ${resource.title}`}
+                    title={resource.sourceUrl ? `Open ${resource.title}` : "No source URL available"}
+                  >
+                    <ExternalLink size={14} aria-hidden="true" />
+                  </button>
                 </div>
               </motion.article>
             );

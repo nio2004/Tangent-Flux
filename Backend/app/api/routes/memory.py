@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.routes.ideas import _get_idea
@@ -14,12 +14,20 @@ router = APIRouter(prefix="/ideas", tags=["memory"])
 @router.post("/{idea_id}/resources", response_model=ResourceOut)
 async def create_resource(idea_id: str, payload: ResourceCreate, db: Session = Depends(get_db)):
     idea = _get_idea(db, idea_id)
-    if idea.memory_state == "MEMORY_READY" and idea.memory_initialized:
-        await dump_update(db, idea, payload.input)
-        await generate_tasks(db, idea)
-        resource = db.query(Resource).filter(Resource.idea_id == idea.id).order_by(Resource.created_at.desc()).first()
-        return resource_out(resource)
-    resource, _ = create_resource_and_chunks(db, idea, payload.input, payload.title, fail_soft=True)
+    try:
+        if idea.memory_state == "MEMORY_READY" and idea.memory_initialized:
+            await dump_update(db, idea, payload.input)
+            await generate_tasks(db, idea)
+            resource = db.query(Resource).filter(Resource.idea_id == idea.id).order_by(Resource.created_at.desc()).first()
+            if payload.title and resource:
+                resource.title = payload.title
+                db.commit()
+                db.refresh(resource)
+            return resource_out(resource)
+        resource, _ = create_resource_and_chunks(db, idea, payload.input, payload.title)
+    except HTTPException:
+        db.rollback()
+        raise
     db.commit()
     db.refresh(resource)
     return resource_out(resource)
