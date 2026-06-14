@@ -6,6 +6,7 @@ class GraphNodeOut(BaseModel):
     label: str
     summary: str
     memberCount: int
+    sourceIds: list[str] = []
     createdBy: str
 
 
@@ -16,6 +17,7 @@ class GraphEdgeOut(BaseModel):
     edgeType: str
     weight: float
     reason: str
+    sharedEvidenceCount: int = 0
 
 
 class GraphOut(BaseModel):

@@ -39,6 +39,7 @@ def graph_out(nodes: list[GraphNode], edges: list[GraphEdge]) -> GraphOut:
                 label=node.label,
                 summary=node.summary,
                 memberCount=node.member_count,
+                sourceIds=loads(node.source_chunk_ids_json, []),
                 createdBy=node.created_by,
             )
             for node in nodes
@@ -51,10 +52,16 @@ def graph_out(nodes: list[GraphNode], edges: list[GraphEdge]) -> GraphOut:
                 edgeType=edge.edge_type,
                 weight=edge.weight,
                 reason=edge.reason,
+                sharedEvidenceCount=_shared_evidence_count(nodes, edge),
             )
             for edge in edges
         ],
     )
+
+
+def _shared_evidence_count(nodes: list[GraphNode], edge: GraphEdge) -> int:
+    by_id = {node.id: set(loads(node.source_chunk_ids_json, [])) for node in nodes}
+    return len(by_id.get(edge.source_node_id, set()) & by_id.get(edge.target_node_id, set()))
 
 
 def memory_out(memory: IdeaMemory | None) -> MemoryOut | None:
