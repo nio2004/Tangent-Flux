@@ -1,4 +1,6 @@
 import time
+import json
+import re
 from datetime import datetime
 
 from fastapi import HTTPException
@@ -7,11 +9,21 @@ from sqlalchemy.orm import Session
 
 from app.agents.agent4_generate import run_agent4_query
 from app.core.config import get_settings
-from app.models import Artifact, ChatMessage, ChatSession, Chunk, GraphNode, Idea, IdeaMemory, Resource
-from app.schemas.chat import ChatMessageOut, ChatSourceOut, ChatSessionOut
+from app.models import Artifact, ChatMessage, ChatSession, Chunk, GraphNode, Idea, IdeaMemory, ProjectMemory, Resource
+from app.schemas.chat import ChatMessageOut, ChatSourceOut, ChatSessionOut, IdeaAgentCardOut, IdeaCardTaskOut
+from app.schemas.task import TaskCreate
 from app.services.embedding_service import embedding_service
 from app.services.memory_service import assert_memory_ready
+from app.services.project_memory_service import (
+    append_project_memory_event,
+    create_project_memory_for_card,
+    get_project_memory,
+    project_memory_out,
+    recent_project_memory_events,
+)
 from app.services.similarity_service import cosine_similarity
+from app.services.task_service import create_task
+from app.services.serialization import task_out
 from app.utils import dumps, iso, loads
 
 
@@ -49,13 +61,21 @@ def list_chat_messages(db: Session, session: ChatSession) -> list[ChatMessage]:
     return db.query(ChatMessage).filter(ChatMessage.session_id == session.id).order_by(ChatMessage.created_at.asc()).all()
 
 
-async def chat_with_idea_agent(db: Session, idea: Idea, session: ChatSession, content: str) -> tuple[ChatMessage, ChatMessage]:
+async def chat_with_idea_agent(
+    db: Session,
+    idea: Idea,
+    session: ChatSession,
+    content: str,
+    project_memory_id: str | None = None,
+) -> tuple[ChatMessage, ChatMessage]:
     started = time.perf_counter()
     memory = assert_memory_ready(db, idea)
     nodes = db.query(GraphNode).filter(GraphNode.idea_id == idea.id).all()
+    project_memory = get_project_memory(db, idea, project_memory_id) if project_memory_id else None
+    project_events = recent_project_memory_events(db, project_memory, 8) if project_memory else []
     sources = _rank_sources(db, idea, content)
     history = list_chat_messages(db, session)[-8:]
-    prompt = _build_agent_question(content, memory, nodes, sources, history)
+    prompt = _build_agent_question(content, memory, nodes, sources, history, project_memory, project_events)
     answer = await _answer_with_optional_web_search(prompt, memory, nodes, content)
 
     user_message = ChatMessage(session_id=session.id, role="user", content=content)
@@ -70,12 +90,50 @@ async def chat_with_idea_agent(db: Session, idea: Idea, session: ChatSession, co
     db.add(assistant_message)
     db.add(session)
     db.flush()
+    if project_memory:
+        append_project_memory_event(db, project_memory, "chat_user", content[:1200], {"session_id": session.id}, refresh=False)
+        append_project_memory_event(
+            db,
+            project_memory,
+            "chat_assistant",
+            assistant_message.content[:1200],
+            {"session_id": session.id, "source_count": len(sources[:6])},
+            refresh=True,
+        )
     _ = started
     db.commit()
     db.refresh(user_message)
     db.refresh(assistant_message)
     db.refresh(session)
     return user_message, assistant_message
+
+
+async def generate_idea_cards(db: Session, idea: Idea, prompt: str) -> tuple[list[IdeaAgentCardOut], list[ChatSourceOut]]:
+    memory = assert_memory_ready(db, idea)
+    nodes = db.query(GraphNode).filter(GraphNode.idea_id == idea.id).all()
+    sources = _rank_sources(db, idea, prompt)
+    cards = _try_generate_cards_with_model(idea, memory, nodes, sources, prompt)
+    if not cards:
+        cards = _fallback_idea_cards(idea, memory, nodes, sources, prompt)
+    return cards, sources[:8]
+
+
+def select_idea_card(db: Session, idea: Idea, card: IdeaAgentCardOut):
+    assert_memory_ready(db, idea)
+    created = []
+    for item in card.firstTasks[:8]:
+        task = create_task(
+            db,
+            idea.id,
+            TaskCreate(title=item.title, description=item.description, lane="todo", points=item.points),
+        )
+        created.append(task)
+    project_memory = create_project_memory_for_card(db, idea, card, created)
+    db.commit()
+    for task in created:
+        db.refresh(task)
+    db.refresh(project_memory)
+    return [task_out(task) for task in created], project_memory_out(project_memory)
 
 
 def session_out(session: ChatSession, message_count: int | None = None) -> ChatSessionOut:
@@ -177,7 +235,16 @@ def _build_agent_question(
     nodes: list[GraphNode],
     sources: list[ChatSourceOut],
     history: list[ChatMessage],
+    project_memory: ProjectMemory | None = None,
+    project_events: list | None = None,
 ) -> str:
+    project_context = ""
+    if project_memory:
+        event_context = "\n".join(f"{event.event_type}: {event.content[:500]}" for event in (project_events or []))
+        project_context = (
+            f"Active selected-project memory, use this first:\n{project_memory.textual_summary}\n\n"
+            f"Recent selected-project events:\n{event_context or 'No recent project events.'}\n\n"
+        )
     node_context = "\n".join(f"- {node.label}: {node.summary}" for node in nodes[:12])
     source_context = "\n".join(f"- [{source.kind}] {source.title}: {source.excerpt}" for source in sources[:8])
     history_context = "\n".join(f"{message.role}: {message.content[:500]}" for message in history)
@@ -188,12 +255,132 @@ def _build_agent_question(
         "Format every answer as bullet points. Never return one long paragraph. "
         "If the user asks to show visualization, visualize, graph, diagram, or relationship, include a 'Visualization references' bullet "
         "that names the relevant graph nodes, image descriptions, links, and evidence titles.\n\n"
+        f"{project_context}"
         f"Textual memory:\n{memory.textual_summary}\n\n"
         f"Graph nodes:\n{node_context or 'No graph nodes.'}\n\n"
         f"Relevant evidence, chunks, and image descriptions:\n{source_context or 'No ranked sources.'}\n\n"
         f"Recent chat:\n{history_context or 'No prior messages.'}\n\n"
         f"User question:\n{question}"
     )
+
+
+def _try_generate_cards_with_model(
+    idea: Idea,
+    memory: IdeaMemory,
+    nodes: list[GraphNode],
+    sources: list[ChatSourceOut],
+    prompt: str,
+) -> list[IdeaAgentCardOut]:
+    settings = get_settings()
+    if not settings.openai_api_key:
+        return []
+    node_context = "\n".join(f"- {node.label}: {node.summary}" for node in nodes[:12])
+    source_context = "\n".join(f"- [{source.kind}] {source.title}: {source.excerpt}" for source in sources[:10])
+    request = (
+        "Generate 3-5 buildable idea cards for this Tangent-Flux idea. "
+        "Filter for strongest fit to the user's request, local memory, and current web context. "
+        "Use web search for latest information when useful. Return only JSON matching this shape: "
+        '{"cards":[{"id":"short-slug","title":"...","mainTopic":"...","summary":"...",'
+        '"whyNow":"...","fitReason":"...","evidence":["..."],"risks":["..."],'
+        '"firstTasks":[{"title":"...","description":"...","points":2}],"score":0.82}]}. '
+        "Make tasks concrete Kanban TODOs. Do not include markdown outside JSON.\n\n"
+        f"Idea: {idea.title}\nProblem: {idea.problem}\nDescription: {idea.description}\n"
+        f"Textual memory:\n{memory.textual_summary}\n\nGraph nodes:\n{node_context}\n\n"
+        f"Ranked local evidence:\n{source_context}\n\nUser request:\n{prompt}"
+    )
+    try:
+        from openai import OpenAI
+
+        client = OpenAI(api_key=settings.openai_api_key)
+        tools = [{"type": "web_search_preview"}] if settings.openai_enable_web_search else None
+        response = client.responses.create(
+            model=settings.openai_idea_generation_model,
+            tools=tools,
+            input=request,
+        )
+        text = getattr(response, "output_text", None) or ""
+        payload = _extract_json_object(text)
+        return _cards_from_payload(payload)
+    except Exception:
+        return []
+
+
+def _extract_json_object(text: str) -> dict:
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        match = re.search(r"\{.*\}", text, re.S)
+        if not match:
+            return {}
+        try:
+            return json.loads(match.group(0))
+        except json.JSONDecodeError:
+            return {}
+
+
+def _cards_from_payload(payload: dict) -> list[IdeaAgentCardOut]:
+    cards = payload.get("cards", []) if isinstance(payload, dict) else []
+    result = []
+    for index, item in enumerate(cards[:5]):
+        try:
+            result.append(
+                IdeaAgentCardOut(
+                    id=str(item.get("id") or f"idea-card-{index + 1}"),
+                    title=str(item.get("title") or "Build direction"),
+                    mainTopic=str(item.get("mainTopic") or item.get("main_topic") or "Opportunity"),
+                    summary=str(item.get("summary") or ""),
+                    whyNow=str(item.get("whyNow") or item.get("why_now") or ""),
+                    fitReason=str(item.get("fitReason") or item.get("fit_reason") or ""),
+                    evidence=[str(value) for value in item.get("evidence", [])[:6]],
+                    risks=[str(value) for value in item.get("risks", [])[:5]],
+                    firstTasks=[
+                        IdeaCardTaskOut(
+                            title=str(task.get("title") or "Define next step"),
+                            description=str(task.get("description") or ""),
+                            points=max(1, min(8, int(task.get("points") or 1))),
+                        )
+                        for task in item.get("firstTasks", item.get("first_tasks", []))[:6]
+                        if isinstance(task, dict)
+                    ],
+                    score=max(0.0, min(1.0, float(item.get("score") or 0.0))),
+                )
+            )
+        except (TypeError, ValueError):
+            continue
+    return result
+
+
+def _fallback_idea_cards(
+    idea: Idea,
+    memory: IdeaMemory,
+    nodes: list[GraphNode],
+    sources: list[ChatSourceOut],
+    prompt: str,
+) -> list[IdeaAgentCardOut]:
+    primary_nodes = nodes[:4] or [GraphNode(label=idea.title, summary=idea.description, idea_id=idea.id)]
+    cards = []
+    for index, node in enumerate(primary_nodes[:4]):
+        evidence = [source.title for source in sources[index : index + 3] if source.title]
+        title = f"{node.label.title()} build path"
+        cards.append(
+            IdeaAgentCardOut(
+                id=f"local-{index + 1}",
+                title=title,
+                mainTopic=node.label,
+                summary=node.summary or memory.textual_summary[:220],
+                whyNow="This direction is supported by the current idea memory and should be tested against fresh sources before commitment.",
+                fitReason=f"Matches the request '{prompt[:120]}' through the '{node.label}' memory cluster.",
+                evidence=evidence or [idea.title],
+                risks=["Needs current-market validation", "Scope may need pruning after first prototype"],
+                firstTasks=[
+                    IdeaCardTaskOut(title=f"Validate {node.label} assumptions", description="Check latest sources and list acceptance criteria.", points=2),
+                    IdeaCardTaskOut(title=f"Prototype {node.label} workflow", description="Build the smallest artifact that proves this direction.", points=3),
+                    IdeaCardTaskOut(title="Review evidence and decide next branch", description="Compare results against memory graph evidence.", points=1),
+                ],
+                score=max(0.55, 0.9 - index * 0.08),
+            )
+        )
+    return cards
 
 
 async def _answer_with_optional_web_search(prompt: str, memory: IdeaMemory, nodes: list[GraphNode], question: str) -> str:

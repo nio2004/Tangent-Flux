@@ -4,11 +4,11 @@ from datetime import datetime
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.agents.agent1_schema import run_agent1
+from app.agents.agent1_schema import run_agent1, schema_validation_issues
 from app.agents.agent2_memory import run_agent2_text_memory
 from app.agents.agent3_update import run_agent3_summary
 from app.agents.agent4_generate import run_agent4_generate, run_agent4_query
-from app.models import AgentRun, Chunk, GraphEdge, GraphNode, Idea, IdeaMemory, Resource, Task, TimelineEntry
+from app.models import AgentRun, Chunk, GraphEdge, GraphEvidenceLink, GraphNode, Idea, IdeaMemory, Resource, Task, TimelineEntry
 from app.schemas.agent import Agent1Output
 from app.schemas.memory import DumpResponse
 from app.schemas.task import TaskCreate
@@ -93,7 +93,7 @@ async def initialize_memory(db: Session, idea: Idea, initial_input: str | None =
         sources = {chunk.id: chunk.text for chunk in chunks}
         intent = _idea_intent(idea)
         agent1 = await run_agent1(intent, sources)
-        _validate_agent1(agent1)
+        _validate_agent1(agent1, sources, intent)
         _log_agent(db, idea.id, "AGENT_1", {"sources": list(sources)}, agent1.model_dump(), started)
         idea.agent_1_validated = True
         idea.memory_state = "AGENT_1_VALIDATED"
@@ -118,6 +118,8 @@ async def initialize_memory(db: Session, idea: Idea, initial_input: str | None =
 
 
 def _reset_existing_memory(db: Session, idea: Idea) -> None:
+    for link in db.query(GraphEvidenceLink).filter(GraphEvidenceLink.idea_id == idea.id).all():
+        db.delete(link)
     for edge in db.query(GraphEdge).filter(GraphEdge.idea_id == idea.id).all():
         db.delete(edge)
     for node in db.query(GraphNode).filter(GraphNode.idea_id == idea.id).all():
@@ -160,6 +162,9 @@ async def _run_agent2(db: Session, idea: Idea, agent1: Agent1Output, chunks: lis
         db.add(node)
         nodes.append(node)
     db.flush()
+    for node in nodes:
+        for chunk in assignments.get(node.label, []):
+            _add_evidence_link(db, idea.id, node, chunk, "AGENT_2", _chunk_concept_score(chunk, node.label, agent1, concept_embeddings))
     create_similarity_edges(db, idea.id, nodes)
     label_to_node = {node.label.lower(): node for node in nodes}
     for hint in agent1.bridge_hints:
@@ -177,6 +182,37 @@ async def _run_agent2(db: Session, idea: Idea, agent1: Agent1Output, chunks: lis
     }
     db.add(IdeaMemory(idea_id=idea.id, textual_summary=text_memory.textual_summary, concept_map_json=dumps(concept_map)))
     _log_agent(db, idea.id, "AGENT_2", {"concepts": agent1.umbrella_concepts}, {"textual_summary": text_memory.textual_summary}, started)
+
+
+def _add_evidence_link(
+    db: Session,
+    idea_id: str,
+    node: GraphNode,
+    chunk: Chunk,
+    created_by: str,
+    support_score: float,
+) -> None:
+    existing = (
+        db.query(GraphEvidenceLink)
+        .filter(GraphEvidenceLink.idea_id == idea_id)
+        .filter(GraphEvidenceLink.node_id == node.id)
+        .filter(GraphEvidenceLink.chunk_id == chunk.id)
+        .first()
+    )
+    if existing:
+        existing.support_score = max(existing.support_score, round(support_score, 4))
+        return
+    db.add(
+        GraphEvidenceLink(
+            idea_id=idea_id,
+            node_id=node.id,
+            chunk_id=chunk.id,
+            resource_id=chunk.resource_id,
+            support_score=round(support_score, 4),
+            reason=f"Chunk supports umbrella concept '{node.label}'.",
+            created_by=created_by,
+        )
+    )
 
 
 def _idea_intent(idea: Idea) -> str:
@@ -306,6 +342,8 @@ async def dump_update(db: Session, idea: Idea, input_value: str) -> DumpResponse
         primary.source_chunk_ids_json = dumps(existing_ids + [chunk.id for chunk in chunks])
         primary.centroid_embedding_json = dumps(running_mean(loads(primary.centroid_embedding_json, []), primary.member_count, delta_vectors))
         primary.member_count += len(chunks)
+        for chunk in chunks:
+            _add_evidence_link(db, idea.id, primary, chunk, "AGENT_3", max_score)
         if primary.member_count % 5 == 0:
             primary.summary = helper.summary
         actions.extend(["attached chunks to existing node", "updated centroid", "incremented member count"])
@@ -321,6 +359,8 @@ async def dump_update(db: Session, idea: Idea, input_value: str) -> DumpResponse
         )
         db.add(node)
         db.flush()
+        for chunk in chunks:
+            _add_evidence_link(db, idea.id, node, chunk, "AGENT_3", 1.0)
         new_node_id = node.id
         create_similarity_edges(db, idea.id, [node] + nodes)
         memory.textual_summary = f"{memory.textual_summary}\n\nNew concept - {node.label}: {node.summary}"
@@ -331,6 +371,8 @@ async def dump_update(db: Session, idea: Idea, input_value: str) -> DumpResponse
         primary.source_chunk_ids_json = dumps(existing_ids + [chunk.id for chunk in chunks])
         primary.centroid_embedding_json = dumps(running_mean(loads(primary.centroid_embedding_json, []), primary.member_count, delta_vectors))
         primary.member_count += len(chunks)
+        for chunk in chunks:
+            _add_evidence_link(db, idea.id, primary, chunk, "AGENT_3", max(max_score, second_score))
         memory.textual_summary = f"{memory.textual_summary}\n\nBridge: {helper.reason}"
         actions.extend(["attached chunks to strongest node", "created or strengthened bridge edge", "refreshed textual memory"])
     db.add(TimelineEntry(idea_id=idea.id, entry_type="memory", content=f"{decision}: {helper.reason}"))
@@ -385,25 +427,24 @@ async def sync_context_to_memory_and_tasks(db: Session, idea: Idea, input_value:
     if not input_value.strip():
         return
     try:
-        if not idea.agent_1_validated or not idea.agent_2_validated or not idea.memory_initialized or idea.memory_state != "MEMORY_READY":
-            if len(input_value.strip()) < 20:
-                return
-            await initialize_memory(db, idea, input_value)
-        else:
+        if idea.agent_1_validated and idea.agent_2_validated and idea.memory_initialized and idea.memory_state == "MEMORY_READY":
             await dump_update(db, idea, input_value)
-        if not visible_resource:
-            latest_resource = db.query(Resource).filter(Resource.idea_id == idea.id).order_by(Resource.created_at.desc()).first()
-            if latest_resource and latest_resource.type != "image":
-                latest_resource.type = "memory_update"
-                db.commit()
-        await generate_tasks(db, idea)
+            if not visible_resource:
+                latest_resource = db.query(Resource).filter(Resource.idea_id == idea.id).order_by(Resource.created_at.desc()).first()
+                if latest_resource and latest_resource.type != "image":
+                    latest_resource.type = "memory_update"
+                    db.commit()
     except HTTPException:
         return
 
 
-def _validate_agent1(output: Agent1Output) -> None:
+def _validate_agent1(output: Agent1Output, sources: dict[str, str] | None = None, intent: str = "") -> None:
     if not (1 <= len(output.umbrella_concepts) <= 8):
         raise ValueError("Agent 1 must produce 1-8 umbrella concepts.")
+    if sources is not None:
+        issues = schema_validation_issues(output, sources, intent)
+        if issues:
+            raise ValueError(f"Agent 1 schema validation failed: {'; '.join(issues)}")
 
 
 def _log_agent(db: Session, idea_id: str, agent_type: str, input_payload: dict, output_payload: dict, started: float) -> AgentRun:

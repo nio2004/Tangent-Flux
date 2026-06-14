@@ -162,3 +162,63 @@ export interface ChatResponse {
   userMessage: ChatMessage;
   assistantMessage: ChatMessage;
 }
+
+export interface ProjectMemoryEvent {
+  id: string;
+  projectMemoryId: string;
+  ideaId: string;
+  eventType: string;
+  content: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface ProjectMemory {
+  id: string;
+  ideaId: string;
+  cardId: string;
+  title: string;
+  mainTopic: string;
+  selectedCard: IdeaAgentCard | null;
+  textualSummary: string;
+  status: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  lastRefreshedAt: string;
+}
+
+export interface ProjectMemoryPayload {
+  projectMemory: ProjectMemory | null;
+  recentEvents: ProjectMemoryEvent[];
+}
+
+export interface IdeaCardTask {
+  title: string;
+  description: string;
+  points: number;
+}
+
+export interface IdeaAgentCard {
+  id: string;
+  title: string;
+  mainTopic: string;
+  summary: string;
+  whyNow: string;
+  fitReason: string;
+  evidence: string[];
+  risks: string[];
+  firstTasks: IdeaCardTask[];
+  score: number;
+}
+
+export interface IdeaCardGenerateResponse {
+  cards: IdeaAgentCard[];
+  grounding: ChatSource[];
+}
+
+export interface IdeaCardSelectResponse {
+  card: IdeaAgentCard;
+  tasks: KanbanTask[];
+  projectMemory: ProjectMemory;
+}

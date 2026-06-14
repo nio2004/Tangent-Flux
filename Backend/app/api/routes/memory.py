@@ -17,7 +17,6 @@ async def create_resource(idea_id: str, payload: ResourceCreate, db: Session = D
     try:
         if idea.memory_state == "MEMORY_READY" and idea.memory_initialized:
             await dump_update(db, idea, payload.input)
-            await generate_tasks(db, idea)
             resource = db.query(Resource).filter(Resource.idea_id == idea.id).order_by(Resource.created_at.desc()).first()
             if payload.title and resource:
                 resource.title = payload.title

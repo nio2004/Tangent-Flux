@@ -93,9 +93,16 @@ METADATA_WORDS = {
 
 async def run_agent1(intent: str, sources: dict[str, str]) -> Agent1Output:
     prompt = f"Intent: {intent}\nSources:\n{sources}"
-    output = await run_structured_agent("Memory Schema Agent", AGENT_1_INSTRUCTIONS, prompt, Agent1Output)
-    if output and _is_high_quality_output(output):
-        return output
+    for attempt in range(2):
+        output = await run_structured_agent("Memory Schema Agent", AGENT_1_INSTRUCTIONS, prompt, Agent1Output)
+        if output and _is_high_quality_output(output):
+            issues = schema_validation_issues(output, sources, intent)
+            if not issues:
+                return output
+            prompt = (
+                f"{prompt}\n\nValidation failed on attempt {attempt + 1}. "
+                f"Fix these grounding issues and return the same strict schema: {issues}"
+            )
     return fallback_agent1(sources, intent)
 
 
@@ -133,6 +140,64 @@ def _is_high_quality_output(output: Agent1Output) -> bool:
         return False
     vague = sum(1 for concept in concepts if _is_vague_concept(concept))
     return vague <= max(1, len(concepts) // 3)
+
+
+def schema_validation_issues(output: Agent1Output, sources: dict[str, str], intent: str = "") -> list[str]:
+    issues: list[str] = []
+    concepts = [_normalize_phrase(concept) for concept in output.umbrella_concepts]
+    known = set(concepts)
+    searchable = {source_id: _clean_text(text).lower() for source_id, text in sources.items()}
+    intent_text = _clean_text(intent).lower()
+
+    for concept in concepts:
+        if _is_vague_concept(concept):
+            issues.append(f"Umbrella concept '{concept}' is too generic.")
+        if not _concept_supported(concept, searchable, intent_text):
+            issues.append(f"Umbrella concept '{concept}' is not grounded in the idea or supplied sources.")
+
+    for source_id, mapped in output.resource_to_umbrella_map.items():
+        if source_id not in searchable:
+            issues.append(f"Source mapping references unknown source '{source_id}'.")
+            continue
+        for concept in mapped:
+            normalized = _normalize_phrase(concept)
+            if normalized not in known:
+                issues.append(f"Source '{source_id}' maps to unknown concept '{concept}'.")
+            elif not _concept_supported_by_text(normalized, searchable[source_id]):
+                issues.append(f"Source '{source_id}' does not support mapped concept '{concept}'.")
+
+    for source_id in searchable:
+        if source_id not in output.per_source_summary:
+            issues.append(f"Missing summary for source '{source_id}'.")
+        if source_id not in output.keyphrase_map:
+            issues.append(f"Missing keyphrases for source '{source_id}'.")
+        if source_id not in output.resource_to_umbrella_map:
+            issues.append(f"Missing concept mapping for source '{source_id}'.")
+
+    for hint in output.bridge_hints:
+        concept_a = _normalize_phrase(hint.concept_a)
+        concept_b = _normalize_phrase(hint.concept_b)
+        if concept_a not in known or concept_b not in known:
+            issues.append(f"Bridge hint references unknown concepts: '{hint.concept_a}' and '{hint.concept_b}'.")
+        elif not (_concept_supported(concept_a, searchable, intent_text) and _concept_supported(concept_b, searchable, intent_text)):
+            issues.append(f"Bridge hint '{hint.concept_a}' / '{hint.concept_b}' is not grounded enough.")
+
+    return issues
+
+
+def _concept_supported(concept: str, sources: dict[str, str], intent_text: str) -> bool:
+    return _concept_supported_by_text(concept, intent_text) or any(
+        _concept_supported_by_text(concept, text) for text in sources.values()
+    )
+
+
+def _concept_supported_by_text(concept: str, text: str) -> bool:
+    tokens = [token for token in concept.lower().replace("-", " ").split() if len(token) > 3]
+    if not tokens:
+        return False
+    matches = sum(1 for token in tokens if token in text)
+    required = 1 if len(tokens) <= 2 else 2
+    return matches >= required
 
 
 def _summary(text: str) -> str:
@@ -201,7 +266,7 @@ def _phrase_score(phrase: str) -> float:
 def _map_source_to_concepts(text: str, concepts: list[str]) -> list[str]:
     normalized = _clean_text(text).lower()
     matches = [concept for concept in concepts if any(token in normalized for token in concept.split())]
-    return matches[:3] or concepts[:1]
+    return matches[:3]
 
 
 def _normalize_phrase(value: str) -> str:

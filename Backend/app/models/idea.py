@@ -37,6 +37,7 @@ class Idea(Base):
     resources = relationship("Resource", back_populates="idea", cascade="all, delete-orphan")
     chunks = relationship("Chunk", back_populates="idea", cascade="all, delete-orphan")
     memory = relationship("IdeaMemory", back_populates="idea", uselist=False, cascade="all, delete-orphan")
+    project_memories = relationship("ProjectMemory", back_populates="idea", cascade="all, delete-orphan")
     graph_nodes = relationship("GraphNode", back_populates="idea", cascade="all, delete-orphan")
     graph_edges = relationship("GraphEdge", back_populates="idea", cascade="all, delete-orphan")
     tasks = relationship("Task", back_populates="idea", cascade="all, delete-orphan")

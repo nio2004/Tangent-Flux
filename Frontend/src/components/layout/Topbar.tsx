@@ -1,6 +1,5 @@
 import { Archive, Columns3, Plus, Search, Settings, Share2 } from "lucide-react";
 import { Button } from "../ui/button.tsx";
-import { GlobeSignal } from "../dashboard/GlobeSignal.tsx";
 
 interface TopbarProps {
   query: string;
@@ -19,10 +18,6 @@ export function Topbar({ query, onQueryChange, onQuickAdd, activeView, onViewCha
   return (
     <header className="topbar">
       <div className="topbar-left">
-        <a className="brand-lockup" href="#board" aria-label="Tangent-Flux board">
-          <GlobeSignal />
-          <span>Tangent-Flux</span>
-        </a>
         <nav className="feed-tabs" aria-label="Workspace views">
           {tabs.map(({ label, icon: Icon, view }) => (
             <button

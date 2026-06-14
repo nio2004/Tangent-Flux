@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./tangent_flux.db"
     openai_api_key: str | None = None
     openai_agent_model: str = "gpt-5-nano"
+    openai_idea_generation_model: str = "gpt-5.5"
     openai_vision_model: str = "gpt-4.1-mini"
     openai_web_search_model: str = "gpt-4.1-mini"
     openai_embedding_model: str = "text-embedding-3-small"

@@ -227,6 +227,7 @@ export function IdeaDetail({
       <motion.section
         className={open ? "detail-view is-open" : "detail-view"}
         aria-hidden={!open}
+        data-lenis-prevent
         initial={false}
         animate={open ? { opacity: 1 } : { opacity: 0 }}
         transition={{ duration: 0.22 }}
@@ -357,7 +358,7 @@ export function IdeaDetail({
         onAddTask={onAddTask}
         onWorkspaceChange={onWorkspaceChange}
       />
-      <IdeaAgentOverlay open={agentOpen} idea={idea} onClose={() => setAgentOpen(false)} />
+      <IdeaAgentOverlay open={agentOpen} idea={idea} onClose={() => setAgentOpen(false)} onWorkspaceChange={onWorkspaceChange} />
     </>
   );
 }

@@ -2,7 +2,7 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
-from app.models import AgentRun, Artifact, Chunk, GraphEdge, GraphNode, Idea, IdeaMemory, Resource, Task, TimelineEntry
+from app.models import AgentRun, Artifact, Chunk, GraphEdge, GraphEvidenceLink, GraphNode, Idea, IdeaMemory, Resource, Task, TimelineEntry
 from app.schemas.graph import GraphEdgeOut, GraphEvidenceOut, GraphNodeOut, GraphOut
 from app.schemas.idea import IdeaOut
 from app.schemas.memory import MemoryOut, ResourceOut
@@ -33,7 +33,7 @@ def idea_out(db: Session, idea: Idea) -> IdeaOut:
 
 
 def graph_out(nodes: list[GraphNode], edges: list[GraphEdge], db: Session | None = None) -> GraphOut:
-    evidence_by_chunk = _evidence_by_chunk(db, nodes) if db else {}
+    evidence_by_node = _evidence_by_node(db, nodes) if db else {}
     return GraphOut(
         nodes=[
             GraphNodeOut(
@@ -42,11 +42,7 @@ def graph_out(nodes: list[GraphNode], edges: list[GraphEdge], db: Session | None
                 summary=node.summary,
                 memberCount=node.member_count,
                 sourceIds=loads(node.source_chunk_ids_json, []),
-                evidence=[
-                    evidence_by_chunk[chunk_id]
-                    for chunk_id in loads(node.source_chunk_ids_json, [])[:8]
-                    if chunk_id in evidence_by_chunk
-                ],
+                evidence=evidence_by_node.get(node.id, [])[:8],
                 createdBy=node.created_by,
             )
             for node in nodes
@@ -64,6 +60,58 @@ def graph_out(nodes: list[GraphNode], edges: list[GraphEdge], db: Session | None
             for edge in edges
         ],
     )
+
+
+def _evidence_by_node(db: Session | None, nodes: list[GraphNode]) -> dict[str, list[GraphEvidenceOut]]:
+    if not db:
+        return {}
+    node_ids = {node.id for node in nodes}
+    if not node_ids:
+        return {}
+    links = db.query(GraphEvidenceLink).filter(GraphEvidenceLink.node_id.in_(node_ids)).all()
+    if not links:
+        return _legacy_evidence_by_node(db, nodes)
+    chunks = {
+        chunk.id: chunk
+        for chunk in db.query(Chunk).filter(Chunk.id.in_({link.chunk_id for link in links})).all()
+    }
+    resources = {
+        resource.id: resource
+        for resource in db.query(Resource).filter(Resource.id.in_({link.resource_id for link in links})).all()
+    }
+    result: dict[str, list[GraphEvidenceOut]] = {node_id: [] for node_id in node_ids}
+    for link in sorted(links, key=lambda item: item.support_score, reverse=True):
+        chunk = chunks.get(link.chunk_id)
+        resource = resources.get(link.resource_id)
+        if not chunk or not resource:
+            continue
+        result.setdefault(link.node_id, []).append(
+            GraphEvidenceOut(
+                chunkId=chunk.id,
+                nodeId=link.node_id,
+                resourceId=resource.id,
+                resourceTitle=resource.title,
+                resourceType=resource.type,
+                sourceUrl=resource.source_url,
+                position=chunk.position,
+                preview=chunk.text[:220],
+                supportScore=link.support_score,
+                reason=link.reason,
+            )
+        )
+    return result
+
+
+def _legacy_evidence_by_node(db: Session | None, nodes: list[GraphNode]) -> dict[str, list[GraphEvidenceOut]]:
+    evidence_by_chunk = _evidence_by_chunk(db, nodes)
+    return {
+        node.id: [
+            evidence_by_chunk[chunk_id]
+            for chunk_id in loads(node.source_chunk_ids_json, [])[:8]
+            if chunk_id in evidence_by_chunk
+        ]
+        for node in nodes
+    }
 
 
 def _evidence_by_chunk(db: Session | None, nodes: list[GraphNode]) -> dict[str, GraphEvidenceOut]:

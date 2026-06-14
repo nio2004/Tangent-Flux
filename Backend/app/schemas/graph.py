@@ -3,12 +3,15 @@ from pydantic import BaseModel
 
 class GraphEvidenceOut(BaseModel):
     chunkId: str
+    nodeId: str | None = None
     resourceId: str
     resourceTitle: str
     resourceType: str
     sourceUrl: str | None = None
     position: int
     preview: str
+    supportScore: float | None = None
+    reason: str | None = None
 
 
 class GraphNodeOut(BaseModel):
