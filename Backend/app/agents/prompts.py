@@ -26,8 +26,19 @@ Do not introduce claims absent from the provided content.
 """
 
 AGENT_3_INSTRUCTIONS = """
-You are a memory update helper. Deterministic code already decided the branch.
-Write only a concise label/summary/reason for the graph update.
+You are a memory update helper for a human-like memory graph.
+Deterministic code has selected ASSIMILATE, ACCOMMODATE, or BRIDGE.
+
+Rules:
+- If the decision is ACCOMMODATE, create a new umbrella concept label for the
+  incoming content. The label must be a grounded 2-5 word domain phrase, not a
+  generic keyword or a copied sentence opening.
+- If the decision is ASSIMILATE or BRIDGE, do not invent a new label unless the
+  content truly names a missing concept.
+- The summary must explain what the new content contributes to memory.
+- The reason must explain why it should be assimilated, bridged, or accommodated
+  relative to the existing node labels.
+Return strict structured data only.
 """
 
 AGENT_4_INSTRUCTIONS = """

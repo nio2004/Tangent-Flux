@@ -242,6 +242,17 @@ def _chunk_concept_score(
     return score
 
 
+def _text_label_overlap(text: str, label: str) -> float:
+    normalized = text.lower().replace("-", " ")
+    tokens = [token for token in label.lower().replace("-", " ").split() if len(token) > 3]
+    if not tokens:
+        return 0.0
+    matches = sum(1 for token in tokens if token in normalized)
+    if len(tokens) >= 3 and matches < 2:
+        return 0.0
+    return matches / len(tokens)
+
+
 def assert_memory_ready(db: Session, idea: Idea) -> IdeaMemory:
     memory = db.query(IdeaMemory).filter(IdeaMemory.idea_id == idea.id).first()
     nodes = db.query(GraphNode).filter(GraphNode.idea_id == idea.id).all()
@@ -278,9 +289,11 @@ async def dump_update(db: Session, idea: Idea, input_value: str) -> DumpResponse
     )
     primary, max_score = ranked[0]
     secondary, second_score = ranked[1] if len(ranked) > 1 else (None, 0.0)
-    if max_score >= 0.75:
+    primary_overlap = _text_label_overlap(resource.clean_content, primary.label)
+    secondary_overlap = _text_label_overlap(resource.clean_content, secondary.label) if secondary else 0.0
+    if max_score >= 0.8 and primary_overlap >= 0.25:
         decision = "ASSIMILATE"
-    elif second_score >= 0.55:
+    elif second_score >= 0.62 and (primary_overlap >= 0.2 or secondary_overlap >= 0.2):
         decision = "BRIDGE"
     else:
         decision = "ACCOMMODATE"
