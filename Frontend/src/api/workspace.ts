@@ -8,6 +8,13 @@ export function addResource(ideaId: string, input: string, title?: string): Prom
   });
 }
 
+export function saveIdeaNotes(ideaId: string, markdown: string): Promise<{ id: string; title: string; markdown: string }> {
+  return request<{ id: string; title: string; markdown: string }>(`/ideas/${ideaId}/notes`, {
+    method: "PUT",
+    body: JSON.stringify({ markdown }),
+  });
+}
+
 export function addTask(ideaId: string, title: string, points = 2): Promise<KanbanTask> {
   return request<KanbanTask>(`/ideas/${ideaId}/tasks`, {
     method: "POST",

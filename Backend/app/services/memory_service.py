@@ -311,6 +311,26 @@ async def generate_tasks(db: Session, idea: Idea):
     return output
 
 
+async def sync_context_to_memory_and_tasks(db: Session, idea: Idea, input_value: str, visible_resource: bool = False) -> None:
+    if not input_value.strip():
+        return
+    try:
+        if not idea.agent_1_validated or not idea.agent_2_validated or not idea.memory_initialized or idea.memory_state != "MEMORY_READY":
+            if len(input_value.strip()) < 20:
+                return
+            await initialize_memory(db, idea, input_value)
+        else:
+            await dump_update(db, idea, input_value)
+        if not visible_resource:
+            latest_resource = db.query(Resource).filter(Resource.idea_id == idea.id).order_by(Resource.created_at.desc()).first()
+            if latest_resource and latest_resource.type != "image":
+                latest_resource.type = "memory_update"
+                db.commit()
+        await generate_tasks(db, idea)
+    except HTTPException:
+        return
+
+
 def _validate_agent1(output: Agent1Output) -> None:
     if not (1 <= len(output.umbrella_concepts) <= 8):
         raise ValueError("Agent 1 must produce 1-8 umbrella concepts.")

@@ -9,6 +9,7 @@ from sqlalchemy.pool import StaticPool
 from app.core.database import Base, get_db
 from app.main import app
 from app.api.routes import uploads
+from app.services import chat_service
 from app.services.seed_service import seed_if_empty
 
 PNG_1X1 = base64.b64decode(
@@ -177,3 +178,48 @@ def test_image_upload_and_graph_overview(client: TestClient, monkeypatch: pytest
     graph = client.get("/api/graph")
     assert graph.status_code == 200
     assert graph.json()["nodes"]
+
+
+def test_idea_agent_chat_persists_session(client: TestClient, monkeypatch: pytest.MonkeyPatch):
+    async def fake_query(question: str, memory: str, nodes: list[str]):
+        from app.schemas.agent import Agent4QueryOutput
+
+        return Agent4QueryOutput(
+            answer=f"Grounded answer using {', '.join(nodes[:2])}: GRPO and the uploaded diagram can be compared.",
+            source_nodes=nodes[:2],
+        )
+
+    monkeypatch.setattr(chat_service, "run_agent4_query", fake_query)
+    idea = client.post(
+        "/api/ideas",
+        json={
+            "title": "Agent Chat Test",
+            "description": "Testing idea-specific chat.",
+            "problem": "Compare research papers and uploaded diagrams.",
+            "tags": ["AI", "Memory"],
+        },
+    ).json()
+    idea_id = idea["id"]
+
+    initialized = client.post(
+        f"/api/ideas/{idea_id}/initialize",
+        json={"input": "GRPO improves RL fine tuning. SFT gives supervised warm starts. Attention diagrams explain token relationships."},
+    )
+    assert initialized.status_code == 200
+
+    response = client.post(
+        f"/api/ideas/{idea_id}/chat",
+        json={"content": "Is there a relationship between GRPO and the attention diagram?"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["session"]["id"]
+    assert payload["assistantMessage"]["role"] == "assistant"
+    assert "GRPO" in payload["assistantMessage"]["content"]
+    assert payload["assistantMessage"]["content"].startswith("- ")
+    assert payload["assistantMessage"]["sources"]
+
+    session_id = payload["session"]["id"]
+    detail = client.get(f"/api/ideas/{idea_id}/chat/sessions/{session_id}")
+    assert detail.status_code == 200
+    assert len(detail.json()["messages"]) == 2

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.api.routes.ideas import _get_idea
 from app.core.database import get_db
-from app.models import AgentRun, GraphEdge, GraphNode, IdeaMemory
+from app.models import AgentRun, GraphEdge, GraphNode, IdeaMemory, Resource
 from app.schemas.memory import DumpRequest, DumpResponse, InitializeRequest, MemoryOut, QueryRequest, QueryResponse, ResourceCreate, ResourceOut
 from app.services.memory_service import create_resource_and_chunks, dump_update, generate_tasks, initialize_memory, query_memory
 from app.services.serialization import agent_run_out, graph_out, memory_out, resource_out
@@ -12,8 +12,13 @@ router = APIRouter(prefix="/ideas", tags=["memory"])
 
 
 @router.post("/{idea_id}/resources", response_model=ResourceOut)
-def create_resource(idea_id: str, payload: ResourceCreate, db: Session = Depends(get_db)):
+async def create_resource(idea_id: str, payload: ResourceCreate, db: Session = Depends(get_db)):
     idea = _get_idea(db, idea_id)
+    if idea.memory_state == "MEMORY_READY" and idea.memory_initialized:
+        await dump_update(db, idea, payload.input)
+        await generate_tasks(db, idea)
+        resource = db.query(Resource).filter(Resource.idea_id == idea.id).order_by(Resource.created_at.desc()).first()
+        return resource_out(resource)
     resource, _ = create_resource_and_chunks(db, idea, payload.input, payload.title, fail_soft=True)
     db.commit()
     db.refresh(resource)
@@ -23,7 +28,7 @@ def create_resource(idea_id: str, payload: ResourceCreate, db: Session = Depends
 @router.get("/{idea_id}/resources", response_model=list[ResourceOut])
 def list_resources(idea_id: str, db: Session = Depends(get_db)):
     idea = _get_idea(db, idea_id)
-    return [resource_out(resource) for resource in idea.resources if resource.type != "image"]
+    return [resource_out(resource) for resource in idea.resources if resource.type not in {"image", "memory_update"}]
 
 
 @router.post("/{idea_id}/initialize")

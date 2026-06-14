@@ -7,6 +7,7 @@ from app.models import Artifact, Chunk, Resource, TimelineEntry
 from app.services.chunk_service import chunk_text, rough_token_count
 from app.services.embedding_service import embedding_service
 from app.services.image_service import data_url_for_image, ingest_image
+from app.services.memory_service import sync_context_to_memory_and_tasks
 from app.services.serialization import artifact_out
 from app.utils import dumps
 
@@ -71,4 +72,5 @@ async def upload_image_artifact(idea_id: str, file: UploadFile = File(...), db: 
     db.add(TimelineEntry(idea_id=idea.id, entry_type="artifact", content=f"Uploaded and ingested image: {title}"))
     db.commit()
     db.refresh(artifact)
+    await sync_context_to_memory_and_tasks(db, idea, description)
     return artifact_out(artifact)

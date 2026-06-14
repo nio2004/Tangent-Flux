@@ -17,6 +17,7 @@ import { Badge } from "../ui/badge.tsx";
 import { Button } from "../ui/button.tsx";
 import { CoverDropzone } from "./CoverDropzone.tsx";
 import { KanbanWorkspace } from "./KanbanWorkspace.tsx";
+import { IdeaAgentOverlay } from "./IdeaAgentOverlay.tsx";
 import { MarkdownNotes } from "./MarkdownNotes.tsx";
 import { ResourceCarousel } from "./ResourceCarousel.tsx";
 import { StudioControlsOverlay } from "./StudioControlsOverlay.tsx";
@@ -218,6 +219,7 @@ export function IdeaDetail({
 }: IdeaDetailProps) {
   const [kanbanExpanded, setKanbanExpanded] = useState(false);
   const [studioOpen, setStudioOpen] = useState(false);
+  const [agentOpen, setAgentOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
@@ -269,6 +271,10 @@ export function IdeaDetail({
             <Button variant="hot" onClick={() => setStudioOpen(true)}>
               <Sparkles size={17} aria-hidden="true" />
               <span>Studio Controls</span>
+            </Button>
+            <Button variant="ghost" onClick={() => setAgentOpen(true)}>
+              <GitBranch size={17} aria-hidden="true" />
+              <span>Idea Agent</span>
             </Button>
           </aside>
 
@@ -351,6 +357,7 @@ export function IdeaDetail({
         onAddTask={onAddTask}
         onWorkspaceChange={onWorkspaceChange}
       />
+      <IdeaAgentOverlay open={agentOpen} idea={idea} onClose={() => setAgentOpen(false)} />
     </>
   );
 }

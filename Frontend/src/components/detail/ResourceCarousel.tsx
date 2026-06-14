@@ -40,10 +40,9 @@ export function ResourceCarousel({ resources }: ResourceCarouselProps) {
             const active = offset === 0;
 
             return (
-              <motion.button
+              <motion.article
                 className={`resource-slide offset-${offset}`}
                 key={resource.title}
-                type="button"
                 onClick={() => setResourceIndex((resourceIndex + 1) % resources.length)}
                 initial={{ opacity: 0, y: 24, rotate: -1 }}
                 animate={{
@@ -66,10 +65,26 @@ export function ResourceCarousel({ resources }: ResourceCarouselProps) {
                 <h4>{resource.title}</h4>
                 <p>{resource.description}</p>
                 <div className="resource-meta">
-                  {resource.meta}
-                  <ExternalLink size={14} aria-hidden="true" />
+                  <span>{resource.meta}</span>
+                  {resource.sourceUrl ? (
+                    <a
+                      href={resource.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(event) => event.stopPropagation()}
+                      aria-label={`Open ${resource.title}`}
+                    >
+                      <ExternalLink size={14} aria-hidden="true" />
+                      Open
+                    </a>
+                  ) : (
+                    <span>
+                      <ExternalLink size={14} aria-hidden="true" />
+                      Stored
+                    </span>
+                  )}
                 </div>
-              </motion.button>
+              </motion.article>
             );
           })}
         </AnimatePresence>

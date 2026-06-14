@@ -126,3 +126,38 @@ export interface WorkspacePayload {
   graph: { nodes: GraphNode[]; edges: GraphEdge[] };
   agentRuns: unknown[];
 }
+
+export interface ChatSource {
+  kind: string;
+  id: string;
+  title: string;
+  excerpt: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant" | string;
+  content: string;
+  sources: ChatSource[];
+  createdAt: string;
+}
+
+export interface ChatSession {
+  id: string;
+  ideaId: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  messageCount: number;
+}
+
+export interface ChatSessionDetail {
+  session: ChatSession;
+  messages: ChatMessage[];
+}
+
+export interface ChatResponse {
+  session: ChatSession;
+  userMessage: ChatMessage;
+  assistantMessage: ChatMessage;
+}

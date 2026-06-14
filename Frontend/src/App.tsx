@@ -7,7 +7,7 @@ import { Topbar } from "./components/layout/Topbar.tsx";
 import { QuickAddDialog } from "./components/quick-add/QuickAddDialog.tsx";
 import { gallery as sampleGallery, ideas as initialIdeas, initialKanban, resources as sampleResources, starterNotes, timeline as sampleTimeline } from "./data/ideas.ts";
 import { createIdea as createIdeaApi, fetchGraphOverview, fetchIdeas, fetchWorkspace, initializeMemory } from "./api/ideas.ts";
-import { addTask as addTaskApi, moveTask as moveTaskApi } from "./api/workspace.ts";
+import { addTask as addTaskApi, moveTask as moveTaskApi, saveIdeaNotes } from "./api/workspace.ts";
 import { moveTask } from "./lib/kanban.ts";
 import type {
   GallerySlide,
@@ -199,6 +199,19 @@ function App() {
     }
   }
 
+  async function handleNotesSave(markdown: string) {
+    setNotes(markdown);
+    if (!selectedIdea) {
+      return;
+    }
+    try {
+      await saveIdeaNotes(selectedIdea.id, markdown);
+      await refreshSelectedWorkspace();
+    } catch (error) {
+      setWorkspaceError(error instanceof Error ? error.message : "Idea dump could not be saved.");
+    }
+  }
+
   return (
     <div className="app-shell">
       <Topbar
@@ -257,7 +270,7 @@ function App() {
           loading={workspaceLoading}
           error={workspaceError}
           onClose={closeDetail}
-          onNotesSave={setNotes}
+          onNotesSave={handleNotesSave}
           onCoverChange={setCover}
           onMoveTask={handleMoveTask}
           onAddTask={handleAddTask}

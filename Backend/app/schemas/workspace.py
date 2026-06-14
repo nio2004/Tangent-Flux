@@ -12,6 +12,11 @@ class NoteOut(BaseModel):
     markdown: str
 
 
+class NoteUpdate(BaseModel):
+    markdown: str
+    title: str = "Research brief"
+
+
 class TimelineOut(BaseModel):
     id: str
     time: str
